@@ -136,8 +136,9 @@ Details: [docs/MIGRATION.md](docs/MIGRATION.md).
 
 1. Change foundational math **only** in this repo.
 2. Run `pytest` and `python examples/quickstart.py`.
-3. Tag a release when κ / R / PDE conventions change (`v0.1.x`).
-4. Consumers: editable install while iterating; pin `@v0.1.0` on HF Spaces / papers.
+3. Update [CHANGELOG.md](CHANGELOG.md); bump version in `pyproject.toml` + `__init__.py`.
+4. Tag a release (`v0.1.x` / `v0.2.0`); CI publishes via Trusted Publishing.
+5. Consumers: `pip install -e ../flux_hopf_lib` while iterating; pin `==0.1.0` (PyPI) or `@v0.1.0` (git) for HF / papers.
 
 ## Tests
 

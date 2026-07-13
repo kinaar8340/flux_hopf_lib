@@ -50,21 +50,26 @@ all = ["flux-hopf-lib[torch,dev,viz]"]
 [project.urls]
 Homepage = "https://github.com/kinaar8340/flux_hopf_lib"
 Repository = "https://github.com/kinaar8340/flux_hopf_lib"
+Issues = "https://github.com/kinaar8340/flux_hopf_lib/issues"
+Changelog = "https://github.com/kinaar8340/flux_hopf_lib/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/kinaar8340/flux_hopf_lib#readme"
 Ecosystem = "https://github.com/kinaar8340"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/flux_hopf_lib"]
 
 [tool.hatch.build.targets.sdist]
 include = [
     "/src",
     "/tests",
+    "/examples",
+    "/docs",
     "/README.md",
     "/LICENSE",
-    "/docs",
+    "/CHANGELOG.md",
 ]
 
-# Standard src-layout: map src/flux_hopf_lib → flux_hopf_lib in the wheel
+# src-layout: ship package as flux_hopf_lib/ inside the wheel
+[tool.hatch.build.targets.wheel]
+packages = ["src/flux_hopf_lib"]
+
 [tool.hatch.build.targets.wheel.sources]
 "src/flux_hopf_lib" = "flux_hopf_lib"
 
