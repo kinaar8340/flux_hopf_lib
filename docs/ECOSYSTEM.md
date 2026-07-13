@@ -20,8 +20,18 @@
 | Theory / lattice | **toe** | Full conduit NN stack, epoch clock, papers, Ray demos |
 | Emergent signatures | **mystery** | Probes, residual synthesis, HF Space storytelling |
 | Photonic VQC | **vqc_proto** | Encoding pipelines, LG/OAM, typehead, QEC stubs |
+| Parent OAM stack | **vqc_sims_public** | Full L_max pipeline, knots, Isomap, patent-era public suite |
 | Analog gravity | **hfb** | Bubbles, defects solvers, BEC, craft, optics export |
 | Portal | **kingdom** | Unified visualization UX |
+
+**HF Spaces** (install `flux-hopf-lib` via git URL in Space `requirements.txt`):
+
+| Space | URL |
+|-------|-----|
+| Mystery | https://huggingface.co/spaces/kinaar111/mystery |
+| Hopf Flux Bubble | https://huggingface.co/spaces/kinaar111/hopf-flux-bubble |
+| Orbital Braille VQC | https://huggingface.co/spaces/kinaar111/orbital-braille-vqc |
+| Kingdom Come | https://huggingface.co/spaces/kinaar111/kingdom |
 
 ## Versioning policy
 
