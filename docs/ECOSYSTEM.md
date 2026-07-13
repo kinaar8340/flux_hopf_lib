@@ -22,12 +22,16 @@ integrations only (never for shared math).
 | Layer | Package | Owns |
 |-------|---------|------|
 | Core | **flux_hopf_lib** | Constants, quaternions, Hopf maps, gauge/flux primitives, λt survival, PDE step, conduit mixins, grids |
+| Core viz | **flux_hopf_lib[viz]** | Matplotlib + Plotly (HF-safe 2D dashboards, S² explorer, animations); geometry export for web |
+| Premium 3D (planned) | **companion** (e.g. flux-hopf-explorer) | WebGPU / shaders.com / Three.js — **not** in the core package |
 | Theory / lattice | **toe** | Full conduit NN stack, epoch clock, papers, Ray demos |
 | Emergent signatures | **mystery** | Probes, residual synthesis, HF Space storytelling |
 | Photonic VQC demos | **vqc_proto** | Encoding pipelines, LG/OAM, typehead, QEC stubs |
 | Parent OAM stack | **vqc_sims_public** | Full L_max pipeline, knots, Isomap, patent-era public suite |
 | Analog gravity | **hfb** | Bubbles, defects solvers, BEC, craft, optics export |
-| Portal | **kingdom** | Unified visualization UX |
+| Portal | **kingdom** | Unified visualization UX (consumes core viz; no WebGPU in core) |
+
+See [VIZ.md](VIZ.md) for the full visualization architecture and roadmap.
 
 ## HF Spaces
 
@@ -49,9 +53,10 @@ Install `flux-hopf-lib` via git URL (or tag) in Space `requirements.txt`:
 When changing `R_RESIDUAL`, `DEFAULT_KAPPA`, or λt conventions, **tag a release**
 and update mystery RESULTS / notes so historical JSON remains interpretable.
 
-Current baseline: **v0.1.0**.
+Current baseline: **v0.2.2** (PyPI).
 
 ## Related docs
 
+- [VIZ.md](VIZ.md) — core viz vs WebGPU companion architecture
 - [DEPENDENCIES.md](DEPENDENCIES.md) — allowed/forbidden import directions
 - [MIGRATION.md](MIGRATION.md) — per-repo import rewrites (mostly complete)

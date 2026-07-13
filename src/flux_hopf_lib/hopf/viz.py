@@ -14,16 +14,20 @@ from typing import Any, Literal
 import numpy as np
 
 from flux_hopf_lib.hopf.fibration import (
+    apply_fiber_lod,
     base_sphere_mesh,
     fiber_linking_number,
+    lod_n_points,
     sample_fiber,
     sample_fiber_family,
+    sample_fiber_family_cached,
 )
 from flux_hopf_lib.hopf.hopfion import toroidal_hopfion_director
 from flux_hopf_lib.utils.grid import cartesian_grid
 
 ColorBy = Literal["phase", "base_point", "index"]
 Backend = Literal["matplotlib", "plotly"]
+AnimMode = Literal["xi1_orbit", "eta_breath", "gauge_twist", "hopfion_spin"]
 
 FIBER_COLORS = (
     "#1a8fe3",
@@ -545,6 +549,9 @@ def plot_hopf_s2_fiber_explorer(
     title: str = "S² base explorer — hover base points for η, ξ₁",
     height: int = 560,
     theme: dict[str, Any] | None = None,
+    use_lod: bool = True,
+    use_cache: bool = True,
+    dim_unselected: bool = True,
 ) -> Any:
     """
     Interactive-oriented Plotly explorer (WebGL-free).
@@ -553,11 +560,25 @@ def plot_hopf_s2_fiber_explorer(
     Right: S² disk with base markers carrying
     ``customdata = [η, ξ₁, y1, y2, y3, index]`` for Gradio/Dash handlers.
 
+    Shared ``legendgroup`` links left-fiber and right-base hover styling.
     Pair with :func:`fiber_family_choices` for dropdown selection UIs.
+
+    Parameters
+    ----------
+    use_lod
+        Cap points per fiber via :func:`~flux_hopf_lib.hopf.fibration.lod_n_points`.
+    use_cache
+        Use :func:`~flux_hopf_lib.hopf.fibration.sample_fiber_family_cached`.
+    dim_unselected
+        Lower opacity on non-selected family fibers for focus.
     """
     go, make_subplots = _require_plotly()
-    fibers = sample_fiber_family(n_fibers=n_fibers, n_points=n_points, scale=2.0)
-    highlight = sample_fiber(selected_eta, selected_xi1, n_points=n_points, scale=2.0)
+    pts = lod_n_points(n_fibers, base_points=n_points) if use_lod else int(n_points)
+    sampler = sample_fiber_family_cached if use_cache else sample_fiber_family
+    fibers = sampler(n_fibers=n_fibers, n_points=pts, scale=2.0)
+    if use_lod:
+        fibers = [apply_fiber_lod(f, pts) for f in fibers]
+    highlight = sample_fiber(selected_eta, selected_xi1, n_points=pts, scale=2.0)
 
     fig = make_subplots(
         rows=1,
@@ -570,17 +591,38 @@ def plot_hopf_s2_fiber_explorer(
         horizontal_spacing=0.08,
     )
 
+    family_opacity = 0.35 if dim_unselected else 0.9
     for i, fiber in enumerate(fibers):
         color = FIBER_COLORS[i % len(FIBER_COLORS)]
+        px = np.asarray(fiber["px"]) * projection_scale
+        py = np.asarray(fiber["py"]) * projection_scale
+        # Per-point customdata for richer line hover (η, ξ₁, ξ₂, index)
+        xi2 = np.asarray(fiber["xi2"])
+        line_cd = np.column_stack(
+            [
+                np.full(len(xi2), fiber["eta"]),
+                np.full(len(xi2), fiber["xi1"]),
+                xi2,
+                np.full(len(xi2), i),
+            ]
+        )
         fig.add_trace(
             go.Scatter(
-                x=np.asarray(fiber["px"]) * projection_scale,
-                y=np.asarray(fiber["py"]) * projection_scale,
+                x=px,
+                y=py,
                 mode="lines",
                 line=dict(color=color, width=2.0),
+                opacity=family_opacity,
                 name=f"F{i + 1}",
                 legendgroup=f"f{i}",
                 showlegend=False,
+                customdata=line_cd,
+                hovertemplate=(
+                    "<b>Fiber %{customdata[3]:.0f}</b><br>"
+                    "η=%{customdata[0]:.3f} · ξ₁=%{customdata[1]:.3f}<br>"
+                    "ξ₂=%{customdata[2]:.3f}<br>"
+                    "xy=(%{x:.2f}, %{y:.2f})<extra></extra>"
+                ),
             ),
             row=1,
             col=1,
@@ -597,10 +639,10 @@ def plot_hopf_s2_fiber_explorer(
                 name=f"base {i + 1}",
                 legendgroup=f"f{i}",
                 hovertemplate=(
-                    "<b>Fiber %{customdata[5]:.0f}</b><br>"
-                    "η=%{customdata[0]:.3f}<br>ξ₁=%{customdata[1]:.3f}<br>"
-                    "S²=(%{customdata[2]:.2f}, %{customdata[3]:.2f}, %{customdata[4]:.2f})"
-                    "<extra></extra>"
+                    "<b>Fiber %{customdata[5]:.0f}</b> (base)<br>"
+                    "η=%{customdata[0]:.3f} · ξ₁=%{customdata[1]:.3f}<br>"
+                    "S² y=(%{customdata[2]:.2f}, %{customdata[3]:.2f}, %{customdata[4]:.2f})<br>"
+                    "<i>linked to left curve via legendgroup</i><extra></extra>"
                 ),
             ),
             row=1,
@@ -626,8 +668,12 @@ def plot_hopf_s2_fiber_explorer(
             x=np.asarray(highlight["px"]) * projection_scale,
             y=np.asarray(highlight["py"]) * projection_scale,
             mode="lines",
-            line=dict(color=ACCENT_GOLD, width=4),
+            line=dict(color=ACCENT_GOLD, width=4.5),
             name="selected fiber",
+            hovertemplate=(
+                f"<b>Selected</b><br>η={selected_eta:.3f} · ξ₁={selected_xi1:.3f}"
+                "<br>xy=(%{x:.2f}, %{y:.2f})<extra></extra>"
+            ),
         ),
         row=1,
         col=1,
@@ -645,7 +691,10 @@ def plot_hopf_s2_fiber_explorer(
             name="selected base",
             customdata=[[selected_eta, selected_xi1, hy1, hy2, hy3]],
             hovertemplate=(
-                "selected η=%{customdata[0]:.3f} ξ₁=%{customdata[1]:.3f}<extra></extra>"
+                "<b>Selected base</b><br>"
+                "η=%{customdata[0]:.3f} · ξ₁=%{customdata[1]:.3f}<br>"
+                "S²=(%{customdata[2]:.2f}, %{customdata[3]:.2f}, %{customdata[4]:.2f})"
+                "<extra></extra>"
             ),
         ),
         row=1,
@@ -657,6 +706,7 @@ def plot_hopf_s2_fiber_explorer(
         "title": dict(text=title, x=0.5, xanchor="center"),
         "margin": dict(l=40, r=20, t=56, b=40),
         "legend": dict(orientation="h", y=1.08),
+        "hovermode": "closest",
     }
     if theme:
         layout.update(theme)
@@ -667,4 +717,347 @@ def plot_hopf_s2_fiber_explorer(
         scaleanchor="y", scaleratio=1, range=[-0.7, 0.7], showgrid=True, row=1, col=2
     )
     fig.update_yaxes(range=[-0.7, 0.7], showgrid=True, row=1, col=2)
+    return fig
+
+
+# ---------------------------------------------------------------------------
+# Animation (matplotlib + Plotly frames)
+# ---------------------------------------------------------------------------
+
+def _anim_highlight_params(
+    mode: AnimMode,
+    frame: int,
+    n_frames: int,
+    *,
+    eta0: float = 0.6,
+    xi1_0: float = 1.2,
+) -> tuple[float, float]:
+    """Map animation frame → (η, ξ₁) for the highlight fiber."""
+    t = frame / max(n_frames, 1)
+    if mode == "xi1_orbit":
+        return eta0, float((xi1_0 + 2.0 * np.pi * t) % (2.0 * np.pi))
+    if mode == "eta_breath":
+        # breathe η between ~0.25 and ~1.2
+        eta = 0.25 + 0.95 * (0.5 + 0.5 * np.sin(2.0 * np.pi * t))
+        return float(eta), xi1_0
+    if mode in ("gauge_twist", "hopfion_spin"):
+        # keep base fixed; phase / director evolve separately
+        return eta0, xi1_0
+    return eta0, xi1_0
+
+
+def animate_hopf_fibers(
+    n_fibers: int = 8,
+    n_points: int = 80,
+    n_frames: int = 48,
+    *,
+    mode: AnimMode = "xi1_orbit",
+    eta: float = 0.6,
+    xi1: float = 1.2,
+    interval: int = 50,
+    projection_scale: float = 1.0,
+    title: str | None = None,
+    figsize: tuple[float, float] = (8.0, 7.0),
+    save_path: str | None = None,
+    dpi: int = 100,
+) -> Any:
+    """
+    Matplotlib animation of Hopf fibers / gauge phase / hopfion director.
+
+    Modes
+    -----
+    xi1_orbit
+        Selected fiber base walks around S² (ξ₁ sweep).
+    eta_breath
+        Selected fiber latitude η oscillates.
+    gauge_twist
+        Static family; marker on highlight advances along ξ₂ (fiber phase).
+    hopfion_spin
+        Toroidal hopfion director slice rotates in the xy-plane.
+
+    Returns a ``matplotlib.animation.FuncAnimation``. Use ``save_path`` (``.gif``
+    or ``.mp4``) for offline export. Requires ``matplotlib`` (``[viz]`` extra).
+    """
+    plt = _require_matplotlib()
+    from matplotlib import animation
+
+    pts = lod_n_points(n_fibers, base_points=n_points)
+    fibers = sample_fiber_family_cached(n_fibers=n_fibers, n_points=pts, scale=2.0)
+    fibers = [apply_fiber_lod(f, pts) for f in fibers]
+
+    fig = plt.figure(figsize=figsize)
+    if mode == "hopfion_spin":
+        ax = fig.add_subplot(111)
+    else:
+        ax = fig.add_subplot(111, projection="3d")
+
+    t_title = title or f"Hopf animation — {mode}"
+
+    if mode == "hopfion_spin":
+        n_grid = 28
+        x2, y2 = cartesian_grid(n_grid, n_grid, extent=1.6)
+        z2 = np.zeros_like(x2)
+        nx, ny, _nz = toroidal_hopfion_director(x2, y2, z2)
+        skip = 2
+        q = ax.quiver(
+            x2[::skip, ::skip],
+            y2[::skip, ::skip],
+            nx[::skip, ::skip],
+            ny[::skip, ::skip],
+            color="#1a8fe3",
+            angles="xy",
+            scale_units="xy",
+            scale=8,
+        )
+        ax.set_aspect("equal")
+        ax.set_title(t_title)
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+
+        def _update_hopfion(frame: int):
+            nonlocal q
+            ang = 2.0 * np.pi * frame / max(n_frames, 1)
+            c, s = np.cos(ang), np.sin(ang)
+            rx = c * nx - s * ny
+            ry = s * nx + c * ny
+            q.remove()
+            q = ax.quiver(
+                x2[::skip, ::skip],
+                y2[::skip, ::skip],
+                rx[::skip, ::skip],
+                ry[::skip, ::skip],
+                color="#1a8fe3",
+                angles="xy",
+                scale_units="xy",
+                scale=8,
+            )
+            ax.set_title(f"{t_title}  θ={ang:.2f}")
+            return (q,)
+
+        anim = animation.FuncAnimation(
+            fig, _update_hopfion, frames=n_frames, interval=interval, blit=False
+        )
+    else:
+        lines = []
+        for i, fiber in enumerate(fibers):
+            color = FIBER_COLORS[i % len(FIBER_COLORS)]
+            (ln,) = ax.plot(
+                np.asarray(fiber["px"]) * projection_scale,
+                np.asarray(fiber["py"]) * projection_scale,
+                np.asarray(fiber["pz"]) * projection_scale,
+                color=color,
+                lw=1.4,
+                alpha=0.55,
+            )
+            lines.append(ln)
+        (hl,) = ax.plot([], [], [], color=ACCENT_GOLD, lw=3.0)
+        phase_pt = ax.scatter([], [], [], color=ACCENT_GOLD, s=40)
+        ax.set_title(t_title)
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        ax.set_zlabel("z")
+        try:
+            ax.set_box_aspect((1, 1, 1))
+        except Exception:
+            pass
+
+        def _update_fibers(frame: int):
+            e, x = _anim_highlight_params(
+                mode, frame, n_frames, eta0=eta, xi1_0=xi1
+            )
+            h = sample_fiber(e, x, n_points=pts, scale=2.0)
+            hx = np.asarray(h["px"]) * projection_scale
+            hy = np.asarray(h["py"]) * projection_scale
+            hz = np.asarray(h["pz"]) * projection_scale
+            hl.set_data(hx, hy)
+            hl.set_3d_properties(hz)
+            if mode == "gauge_twist":
+                k = int((frame / max(n_frames, 1)) * (len(hx) - 1))
+                phase_pt._offsets3d = ([hx[k]], [hy[k]], [hz[k]])
+            else:
+                phase_pt._offsets3d = ([], [], [])
+            ax.set_title(f"{t_title}  η={e:.2f} ξ₁={x:.2f}")
+            return (hl, phase_pt, *lines)
+
+        anim = animation.FuncAnimation(
+            fig, _update_fibers, frames=n_frames, interval=interval, blit=False
+        )
+
+    if save_path:
+        path = str(save_path)
+        if path.lower().endswith(".gif"):
+            anim.save(path, writer="pillow", dpi=dpi)
+        else:
+            anim.save(path, dpi=dpi)
+    return anim
+
+
+def create_plotly_fiber_animation(
+    n_fibers: int = 8,
+    n_points: int = 80,
+    n_frames: int = 36,
+    *,
+    mode: AnimMode = "xi1_orbit",
+    eta: float = 0.6,
+    xi1: float = 1.2,
+    projection_scale: float = 1.0,
+    height: int = 560,
+    title: str | None = None,
+    theme: dict[str, Any] | None = None,
+    use_lod: bool = True,
+) -> Any:
+    """
+    Plotly figure with playable frames (HF Gradio-friendly via ``gr.Plot``).
+
+    Same modes as :func:`animate_hopf_fibers` except ``hopfion_spin`` falls back
+    to a 2D quiver-less η-breath style highlight (use matplotlib for hopfion).
+
+    WebGL-free: uses 2D stereographic xy projections for Space reliability.
+    """
+    go, _ = _require_plotly()
+    if mode == "hopfion_spin":
+        mode = "eta_breath"  # 2D-safe fallback for Plotly path
+
+    pts = lod_n_points(n_fibers, base_points=n_points) if use_lod else int(n_points)
+    fibers = sample_fiber_family_cached(n_fibers=n_fibers, n_points=pts, scale=2.0)
+    fibers = [apply_fiber_lod(f, pts) for f in fibers]
+
+    # Base frame: family + initial highlight
+    e0, x0 = _anim_highlight_params(mode, 0, n_frames, eta0=eta, xi1_0=xi1)
+    h0 = sample_fiber(e0, x0, n_points=pts, scale=2.0)
+
+    fig = go.Figure()
+    for i, fiber in enumerate(fibers):
+        color = FIBER_COLORS[i % len(FIBER_COLORS)]
+        fig.add_trace(
+            go.Scatter(
+                x=np.asarray(fiber["px"]) * projection_scale,
+                y=np.asarray(fiber["py"]) * projection_scale,
+                mode="lines",
+                line=dict(color=color, width=2.0),
+                opacity=0.4,
+                name=f"F{i + 1}",
+                showlegend=False,
+                hoverinfo="skip",
+            )
+        )
+    fig.add_trace(
+        go.Scatter(
+            x=np.asarray(h0["px"]) * projection_scale,
+            y=np.asarray(h0["py"]) * projection_scale,
+            mode="lines",
+            line=dict(color=ACCENT_GOLD, width=4),
+            name="highlight",
+        )
+    )
+    # Optional phase marker for gauge_twist
+    k0 = 0
+    fig.add_trace(
+        go.Scatter(
+            x=[float(np.asarray(h0["px"])[k0] * projection_scale)],
+            y=[float(np.asarray(h0["py"])[k0] * projection_scale)],
+            mode="markers",
+            marker=dict(size=10, color=ACCENT_GOLD),
+            name="phase",
+            showlegend=False,
+        )
+    )
+
+    frames = []
+    for fi in range(n_frames):
+        e, x = _anim_highlight_params(mode, fi, n_frames, eta0=eta, xi1_0=xi1)
+        h = sample_fiber(e, x, n_points=pts, scale=2.0)
+        hx = np.asarray(h["px"]) * projection_scale
+        hy = np.asarray(h["py"]) * projection_scale
+        k = int((fi / max(n_frames, 1)) * (len(hx) - 1)) if mode == "gauge_twist" else 0
+        # Only update highlight + phase traces (indices n_fibers, n_fibers+1)
+        frames.append(
+            go.Frame(
+                name=str(fi),
+                data=[
+                    go.Scatter(x=hx, y=hy),
+                    go.Scatter(x=[float(hx[k])], y=[float(hy[k])]),
+                ],
+                traces=[n_fibers, n_fibers + 1],
+                layout=go.Layout(
+                    title_text=(title or f"Hopf animation — {mode}")
+                    + f"  · η={e:.2f} ξ₁={x:.2f}"
+                ),
+            )
+        )
+
+    fig.frames = frames
+    t_title = title or f"Hopf animation — {mode}"
+    layout: dict[str, Any] = {
+        "height": height,
+        "title": dict(text=t_title, x=0.5, xanchor="center"),
+        "margin": dict(l=40, r=20, t=60, b=40),
+        "xaxis": dict(scaleanchor="y", scaleratio=1, showgrid=True),
+        "yaxis": dict(showgrid=True),
+        "updatemenus": [
+            {
+                "type": "buttons",
+                "showactive": False,
+                "y": 1.12,
+                "x": 0.0,
+                "xanchor": "left",
+                "buttons": [
+                    {
+                        "label": "Play",
+                        "method": "animate",
+                        "args": [
+                            None,
+                            {
+                                "frame": {"duration": 50, "redraw": True},
+                                "fromcurrent": True,
+                                "transition": {"duration": 0},
+                            },
+                        ],
+                    },
+                    {
+                        "label": "Pause",
+                        "method": "animate",
+                        "args": [
+                            [None],
+                            {
+                                "frame": {"duration": 0, "redraw": False},
+                                "mode": "immediate",
+                                "transition": {"duration": 0},
+                            },
+                        ],
+                    },
+                ],
+            }
+        ],
+        "sliders": [
+            {
+                "active": 0,
+                "yanchor": "top",
+                "xanchor": "left",
+                "currentvalue": {
+                    "prefix": "frame: ",
+                    "visible": True,
+                    "xanchor": "right",
+                },
+                "pad": {"b": 10, "t": 40},
+                "steps": [
+                    {
+                        "args": [
+                            [str(fi)],
+                            {
+                                "frame": {"duration": 0, "redraw": True},
+                                "mode": "immediate",
+                            },
+                        ],
+                        "label": str(fi),
+                        "method": "animate",
+                    }
+                    for fi in range(n_frames)
+                ],
+            }
+        ],
+    }
+    if theme:
+        layout.update(theme)
+    fig.update_layout(**layout)
     return fig

@@ -8,7 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Animated gauge-flow / fiber-twist demos
+- Companion WebGPU / shaders.com explorer consuming `export_fiber_curves`
+- Kingdom portal animation tab wired to Plotly fiber animation
+
+## [0.2.2] — 2026-07-12
+
+Visualization layer push: animation, LOD/cache, explorer polish, web export.
+
+### Added
+- **hopf/fibration.py**: vectorized `sample_fiber_family`; `sample_fiber_family_cached` + `clear_fiber_family_cache`
+- **hopf/fibration.py**: `lod_n_points`, `downsample_curve`, `apply_fiber_lod` for large families
+- **hopf/fibration.py**: `export_fiber_curves` — JSON-friendly payload for WebGPU / Three.js companions
+- **hopf/viz.py**: `animate_hopf_fibers` (matplotlib) and `create_plotly_fiber_animation` (Play/Pause frames)
+- Animation modes: `xi1_orbit`, `eta_breath`, `gauge_twist`, `hopfion_spin`
+- **docs/VIZ.md** — two-layer architecture (core Plotly/MPL vs premium WebGPU companion)
+
+### Changed
+- `plot_hopf_s2_fiber_explorer`: richer hover tooltips, dim unselected fibers, optional LOD + cache
 
 ## [0.2.1] — 2026-07-12
 
@@ -59,7 +75,8 @@ Initial public foundation for the Hopf / flux / quaternion / conduit ecosystem.
 - Consumer repos and HF Spaces pin `@v0.1.0` (git) until PyPI install is preferred.
 - Breaking changes to κ / R / PDE conventions require a minor or major bump and pin updates.
 
-[Unreleased]: https://github.com/kinaar8340/flux_hopf_lib/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/kinaar8340/flux_hopf_lib/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.2
 [0.2.1]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.1
 [0.2.0]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.0
 [0.1.0]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.1.0

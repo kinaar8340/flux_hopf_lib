@@ -1,16 +1,22 @@
 """Hopf fibration mappings, fibers, hopfions, invariants, and optional viz."""
 
 from flux_hopf_lib.hopf.fibration import (
+    apply_fiber_lod,
     base_sphere_mesh,
+    clear_fiber_family_cache,
+    downsample_curve,
+    export_fiber_curves,
     fiber_linking_number,
     hopf_coordinates,
     hopf_map,
     hopf_map_from_angles,
     hopf_map_quaternion,
     linking_number_pair,
+    lod_n_points,
     s3_from_quaternion,
     sample_fiber,
     sample_fiber_family,
+    sample_fiber_family_cached,
     stereographic_project,
 )
 from flux_hopf_lib.hopf.hopfion import (
@@ -36,6 +42,12 @@ __all__ = [
     "stereographic_project",
     "sample_fiber",
     "sample_fiber_family",
+    "sample_fiber_family_cached",
+    "clear_fiber_family_cache",
+    "lod_n_points",
+    "downsample_curve",
+    "apply_fiber_lod",
+    "export_fiber_curves",
     "base_sphere_mesh",
     "fiber_linking_number",
     "toroidal_hopfion_director",

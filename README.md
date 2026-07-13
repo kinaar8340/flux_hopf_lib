@@ -8,7 +8,7 @@
 **Shared core library** for the Hopf / flux / quaternion / conduit ecosystem
 ([kinaar8340](https://github.com/kinaar8340)).
 
-**Version:** [`0.2.1`](https://github.com/kinaar8340/flux_hopf_lib) · **Role:** single source of truth for foundational math.
+**Version:** [`0.2.2`](https://github.com/kinaar8340/flux_hopf_lib) · **Role:** single source of truth for foundational math.
 
 Specialized experiments, Gradio portals, and full model stacks stay in consumer
 repos. Consumers depend on **this package**, not on each other, for shared
@@ -28,7 +28,8 @@ primitives.
 - **Allowed:** `from flux_hopf_lib…`, optional sibling imports of specialized models only.
 - **Forbidden:** `sys.path` into `../toe` for survival/κ math; copy-pasted R residual / Hopf maps.
 
-See [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) and [docs/ECOSYSTEM.md](docs/ECOSYSTEM.md).
+See [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md), [docs/ECOSYSTEM.md](docs/ECOSYSTEM.md),
+and [docs/VIZ.md](docs/VIZ.md) (core Plotly/MPL vs WebGPU companion split).
 
 ## Install
 
@@ -46,7 +47,7 @@ pip install -e ".[torch]"
 
 ```bash
 # Production / HF Spaces / paper reproduction
-pip install flux-hopf-lib==0.2.1
+pip install flux-hopf-lib==0.2.2
 
 # Local core development (editable)
 pip install -e ../flux_hopf_lib
@@ -54,7 +55,7 @@ pip install -e ../flux_hopf_lib
 
 ```text
 # requirements.txt / pyproject.toml / HF Space
-flux-hopf-lib==0.2.1
+flux-hopf-lib==0.2.2
 ```
 
 - PyPI: https://pypi.org/project/flux-hopf-lib/
@@ -87,9 +88,12 @@ from flux_hopf_lib.simulation import (
 # Optional visualizations (pip install 'flux-hopf-lib[viz]')
 # from flux_hopf_lib.hopf.viz import (
 #     plot_hopf_fibers_stereographic,
-#     plot_hopf_fibers_dashboard,   # HF-safe 2×2 Plotly
-#     plot_hopf_s2_fiber_explorer, # S² base picker
+#     plot_hopf_fibers_dashboard,      # HF-safe 2×2 Plotly
+#     plot_hopf_s2_fiber_explorer,    # S² base picker
+#     create_plotly_fiber_animation,  # Play/Pause frames
 # )
+# Geometry export for a future WebGPU companion (no viz deps):
+# from flux_hopf_lib.hopf import export_fiber_curves
 from flux_hopf_lib.conduit import (
     ConduitConfig,
     GoldenAngleMixin,

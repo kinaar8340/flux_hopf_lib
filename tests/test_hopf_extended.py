@@ -43,6 +43,49 @@ def test_sample_fiber_family_count():
     assert "base_y1" in fibers[0]
 
 
+def test_sample_fiber_family_vectorized_matches_loop():
+    a = sample_fiber_family(n_fibers=6, n_points=30, vectorized=True)
+    b = sample_fiber_family(n_fibers=6, n_points=30, vectorized=False)
+    assert len(a) == len(b)
+    for fa, fb in zip(a, b):
+        assert abs(fa["eta"] - fb["eta"]) < 1e-12
+        assert abs(fa["xi1"] - fb["xi1"]) < 1e-12
+        assert np.allclose(fa["curve_xyz"], fb["curve_xyz"], atol=1e-9)
+
+
+def test_lod_and_export_fiber_curves():
+    from flux_hopf_lib.hopf import (
+        apply_fiber_lod,
+        clear_fiber_family_cache,
+        export_fiber_curves,
+        lod_n_points,
+        sample_fiber_family_cached,
+    )
+
+    assert lod_n_points(100, base_points=200, point_budget=5000) <= 50
+    clear_fiber_family_cache()
+    f1 = sample_fiber_family_cached(n_fibers=4, n_points=40)
+    f2 = sample_fiber_family_cached(n_fibers=4, n_points=40)
+    assert len(f1) == len(f2) == 4
+    # cache returns copies
+    f1[0]["eta"] = -1.0
+    assert f2[0]["eta"] != -1.0
+
+    fiber = sample_fiber(0.4, 0.5, n_points=100)
+    small = apply_fiber_lod(fiber, 25)
+    assert small["curve_xyz"].shape[0] == 25
+
+    payload = export_fiber_curves(n_fibers=5, n_points=60, max_points=20, include_s3=True)
+    assert payload["version"] == 1
+    assert len(payload["fibers"]) == 5
+    assert len(payload["fibers"][0]["xyz"]) == 20
+    assert "s3" in payload["fibers"][0]
+    # JSON-serializable floats
+    import json
+
+    json.dumps(payload)
+
+
 def test_hopf_map_quaternion_unit():
     y1, y2, y3 = hopf_map_quaternion(1.0, 0.0, 0.0, 0.0)
     n = math.sqrt(y1**2 + y2**2 + y3**2)
@@ -132,10 +175,52 @@ def test_viz_plotly_dashboard_and_explorer():
         n_fibers=5, n_points=40, selected_eta=0.5, selected_xi1=1.0, height=400
     )
     assert explorer is not None
-    # Base markers carry customdata for Gradio / dropdown handlers
+    # Base markers carry customdata [η, ξ₁, y1, y2, y3, index] (6 cols)
     base_traces = [
-        t for t in explorer.data if getattr(t, "customdata", None) is not None
+        t
+        for t in explorer.data
+        if getattr(t, "customdata", None) is not None
+        and len(np.asarray(t.customdata).shape) == 2
+        and np.asarray(t.customdata).shape[1] >= 5
+        and np.asarray(t.customdata).shape[0] == 1
     ]
     assert len(base_traces) >= 1
-    cd = base_traces[0].customdata
-    assert cd is not None and len(cd[0]) >= 5
+    cd = np.asarray(base_traces[0].customdata)
+    assert cd.shape[1] >= 5
+
+
+def test_animate_hopf_fibers_matplotlib():
+    pytest.importorskip("matplotlib")
+    import matplotlib
+
+    matplotlib.use("Agg")
+    from flux_hopf_lib.hopf.viz import animate_hopf_fibers
+
+    anim = animate_hopf_fibers(
+        n_fibers=3, n_points=30, n_frames=4, mode="xi1_orbit", interval=20
+    )
+    assert anim is not None
+    # drive a couple of frames without display
+    for i in range(3):
+        anim._func(i)
+    import matplotlib.pyplot as plt
+
+    # Keep reference until close to avoid matplotlib "deleted without rendering"
+    _keep = anim  # noqa: F841
+    plt.close(anim._fig if hasattr(anim, "_fig") else "all")
+
+
+def test_create_plotly_fiber_animation():
+    pytest.importorskip("plotly")
+    from flux_hopf_lib.hopf.viz import create_plotly_fiber_animation
+
+    fig = create_plotly_fiber_animation(
+        n_fibers=3, n_points=30, n_frames=5, mode="gauge_twist", height=300
+    )
+    assert fig is not None
+    assert fig.frames is not None and len(fig.frames) == 5
+    menus = list(fig.layout.updatemenus or [])
+    assert len(menus) >= 1
+    assert getattr(menus[0], "type", None) == "buttons" or (
+        isinstance(menus[0], dict) and menus[0].get("type") == "buttons"
+    )
