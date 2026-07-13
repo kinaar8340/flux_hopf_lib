@@ -11,7 +11,8 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from flux_hopf_lib.constants import DEFAULT_KAPPA, PI, theta_crit
+from flux_hopf_lib.constants import DEFAULT_KAPPA, PI
+from flux_hopf_lib.constants import theta_crit as theta_crit_fn
 
 Array = NDArray[np.floating]
 
@@ -23,15 +24,15 @@ def twist_pde_step(
     D: float = 0.05,
     kappa: float = DEFAULT_KAPPA,
     delta_omega: float = 0.002,
-    theta_crit_val: float | None = None,
+    theta_crit: float | None = None,
     nx: int | None = None,
 ) -> Array:
     """Single finite-difference step of the nonlinear twist PDE.
 
     ∂θ/∂t = D Δθ + (D/2) cot(θ/2) |∇θ|² + Δω − κ θ̄ + B(θ)
     """
-    if theta_crit_val is None:
-        theta_crit_val = theta_crit(kappa)
+    if theta_crit is None:
+        theta_crit = theta_crit_fn(kappa)
     if nx is None:
         nx = theta.shape[0]
 
@@ -59,7 +60,7 @@ def twist_pde_step(
 
     bar_theta = float(theta.mean())
     gauge = -kappa * bar_theta
-    burst = np.where(theta > theta_crit_val, -50.0 * (theta - theta_crit_val), 0.0)
+    burst = np.where(theta > theta_crit, -50.0 * (theta - theta_crit), 0.0)
     theta = theta + dt * (D * lap + cot_term + delta_omega + gauge + burst)
     return np.clip(theta, 0.01, 2 * PI - 0.01)
 
@@ -71,14 +72,18 @@ def simulate_twist_pde(
     D: float = 0.05,
     kappa: float = DEFAULT_KAPPA,
     delta_omega: float = 0.002,
-    theta_crit_val: float | None = None,
+    theta_crit: float | None = None,
     seed: int = 42,
     track_interval: int = 50,
     theta0: Array | None = None,
+    **kwargs: Any,
 ) -> dict[str, Any]:
     """Evolve the twist PDE; return survival stats and histories."""
-    if theta_crit_val is None:
-        theta_crit_val = theta_crit(kappa)
+    if theta_crit is None and "theta_crit_val" in kwargs:
+        theta_crit = kwargs.pop("theta_crit_val")
+    kwargs.pop("theta_crit_val", None)
+    if theta_crit is None:
+        theta_crit = theta_crit_fn(kappa)
 
     rng = np.random.default_rng(seed)
     if theta0 is None:
@@ -101,7 +106,7 @@ def simulate_twist_pde(
             D=D,
             kappa=kappa,
             delta_omega=delta_omega,
-            theta_crit_val=theta_crit_val,
+            theta_crit=theta_crit,
             nx=nx,
         )
         if step % track_interval == 0 or step == nt - 1:
@@ -135,7 +140,7 @@ def simulate_twist_pde(
             "D": D,
             "kappa": kappa,
             "delta_omega": delta_omega,
-            "theta_crit": theta_crit_val,
+            "theta_crit": theta_crit,
             "seed": seed,
         },
         "survival": survival,

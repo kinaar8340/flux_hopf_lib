@@ -21,8 +21,8 @@ from flux_hopf_lib.constants import (
     PHI_INV2,
     PI,
     R_RESIDUAL,
-    theta_crit,
 )
+from flux_hopf_lib.constants import theta_crit as theta_crit_fn
 from flux_hopf_lib.quaternion.core import q_conj, q_mult, q_normalize, small_rotor
 from flux_hopf_lib.simulation.relaxation import simulate_twist_pde
 
@@ -125,18 +125,25 @@ def simulate_twist_pde_survival(
     D: float = 0.05,
     kappa: float = DEFAULT_KAPPA,
     delta_omega: float = 0.002,
-    theta_crit_val: float | None = None,
+    theta_crit: float | None = None,
     seed: int = 42,
     normalize_to_lambda_t: float | None = DEFAULT_LAMBDA_T,
     track_interval: int = 50,
+    **kwargs: Any,
 ) -> dict[str, Any]:
     """
     Run twist-PDE relaxation, optionally stopping at λt = normalize_to_lambda_t.
 
     Returns survival fractions and analog comparison at the normalized horizon.
+
+    Parameter name ``theta_crit`` matches the historical toe API. Legacy alias
+    ``theta_crit_val`` is accepted via kwargs.
     """
-    if theta_crit_val is None:
-        theta_crit_val = theta_crit(kappa)
+    if theta_crit is None and "theta_crit_val" in kwargs:
+        theta_crit = kwargs.pop("theta_crit_val")
+    kwargs.pop("theta_crit_val", None)
+    if theta_crit is None:
+        theta_crit = theta_crit_fn(kappa)
 
     norm: LambdaTNormalization | None = None
     if normalize_to_lambda_t is not None:
@@ -156,7 +163,7 @@ def simulate_twist_pde_survival(
         D=D,
         kappa=kappa,
         delta_omega=delta_omega,
-        theta_crit_val=theta_crit_val,
+        theta_crit=theta_crit,
         seed=seed,
         track_interval=track_interval,
     )
@@ -221,7 +228,7 @@ def evolve_gauged_twist_survival(
     identity_survival_trace: list[float] = []
     pointer_trace: list[float] = []
     burst_count = 0
-    t_crit = theta_crit(kappa)
+    t_crit = theta_crit_fn(kappa)
 
     initial_twist = None
     for _ in range(n_steps):
