@@ -110,10 +110,11 @@ from flux_hopf_lib.quaternion.torch_ops import qmul, qnormalize  # optional
 
 ---
 
-## vqc_proto (third)
+## vqc_proto (third) — done
+
+`proto/orbital_braille/quaternion_codec.py` (and HF Space mirror) re-exports:
 
 ```python
-# Prefer shared Quaternion for codec interop
 from flux_hopf_lib.quaternion import Quaternion, encode_shard, decode_shard, rodrigues_rotation
 ```
 
@@ -122,7 +123,7 @@ application-specific.
 
 ---
 
-## hfb (fourth)
+## hfb (fourth) — done
 
 ```python
 from flux_hopf_lib.hopf import hopf_map, hopf_coordinates, toroidal_hopfion_director
@@ -130,8 +131,8 @@ from flux_hopf_lib.flux import gaussian_defect, toroidal_bubble_wall
 from flux_hopf_lib.utils import cartesian_grid, laplacian_fft
 ```
 
-Thin-wrap or re-export inside `hfb.hopf` / `hfb.defects` so existing `from hfb.hopf
-import …` keeps working.
+`hfb.hopf`, `hfb.utils.grid`, and shared `hfb.defects.densities` re-export the
+core; hemi-void / `build_defect_density` stay HFB-local.
 
 ---
 
