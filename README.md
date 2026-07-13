@@ -3,29 +3,32 @@
 **Shared core library** for the Hopf / flux / quaternion / conduit ecosystem
 ([kinaar8340](https://github.com/kinaar8340)).
 
-This package is the **single source of truth** for foundational math and shared
-probes. Specialized experiments, Gradio portals, and full model stacks stay in
-consumer repos (`toe`, `mystery`, `vqc_proto`, `hfb`, `kingdom`, …).
+**Version:** `0.1.0` · **Role:** single source of truth for foundational math.
 
-## Why this exists
+Specialized experiments, Gradio portals, and full model stacks stay in consumer
+repos. Consumers depend on **this package**, not on each other, for shared
+primitives.
 
-Across the ecosystem the same ideas appear repeatedly:
+## Dependency direction
 
-| Theme | Where it lived before | Now |
-|-------|----------------------|-----|
-| Quaternion ops / rotors | toe `conduit.py`, vqc_proto `quaternion_codec` | `flux_hopf_lib.quaternion` |
-| Hopf map / hopfions | hfb `hopf/` | `flux_hopf_lib.hopf` |
-| Flux lattice / gauge / defects | toe + hfb | `flux_hopf_lib.flux` |
-| λt survival, κ, twist PDE | toe `relaxation_survival.py` (path-hacked by mystery) | `flux_hopf_lib.simulation` |
-| Conduit base / golden-angle | toe `conduit.py` helpers | `flux_hopf_lib.conduit` |
+```text
+                    flux_hopf_lib  (core / SoT)
+                           │
+     ┌─────────┬───────────┼───────────┬──────────┬────────────┐
+     ▼         ▼           ▼           ▼          ▼            ▼
+  mystery     toe      vqc_proto      hfb     kingdom   vqc_sims_public
+   HF ✓                HF ✓         HF ✓     HF ✓      (parent OAM suite)
+```
 
-Consumer repos install this package instead of `sys.path` hacks into sibling
-checkouts.
+- **Allowed:** `from flux_hopf_lib…`, optional sibling imports of specialized models only.
+- **Forbidden:** `sys.path` into `../toe` for survival/κ math; copy-pasted R residual / Hopf maps.
+
+See [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) and [docs/ECOSYSTEM.md](docs/ECOSYSTEM.md).
 
 ## Install
 
 ```bash
-# Editable (development — recommended while the ecosystem is in flux)
+# Editable (local ecosystem development)
 cd ~/Projects/flux_hopf_lib
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
@@ -34,22 +37,46 @@ pip install -e ".[dev]"
 pip install -e ".[torch]"
 ```
 
-From another repo during active development:
+**Consumer repos:**
 
 ```bash
-# requirements.txt
--e ../flux_hopf_lib
-
-# or pyproject.toml
-# dependencies = ["flux-hopf-lib @ file:///${PROJECT_ROOT}/../flux_hopf_lib"]
 pip install -e ../flux_hopf_lib
+# or pin a release tag:
+# pip install "flux-hopf-lib @ git+https://github.com/kinaar8340/flux_hopf_lib.git@v0.1.0"
 ```
-
-Pinned release (after publishing):
 
 ```text
-flux-hopf-lib==0.1.0
+# requirements.txt / HF Space
+flux-hopf-lib @ git+https://github.com/kinaar8340/flux_hopf_lib.git@v0.1.0
 ```
+
+## Recommended import style
+
+Keep the namespace **flat and predictable**:
+
+```python
+from flux_hopf_lib import PHI, R_RESIDUAL, E_INV2, DEFAULT_KAPPA
+from flux_hopf_lib.quaternion import Quaternion, small_rotor, q_mult
+from flux_hopf_lib.hopf import hopf_map, hopf_map_from_angles, toroidal_hopfion_director
+from flux_hopf_lib.flux import FluxLatticeConfig, FluxFlywheel, gaussian_defect
+from flux_hopf_lib.simulation import (
+    steps_for_lambda_t,
+    evolve_gauged_twist_survival,
+    simulate_twist_pde_survival,
+    compare_to_analogs,
+)
+from flux_hopf_lib.conduit import (
+    ConduitConfig,
+    GoldenAngleMixin,
+    GaugePointerMixin,
+    apply_golden_angle_increment,
+)
+from flux_hopf_lib.utils import cartesian_grid, laplacian_fft
+```
+
+Leaf repos may keep **thin re-export shims** for one release cycle
+(`toe.relaxation_survival`, `hfb.hopf`, `orbital_braille.quaternion_codec`) so old
+imports keep working while you migrate.
 
 ## Package layout
 
@@ -62,72 +89,55 @@ src/flux_hopf_lib/
   simulation/           # λt normalization, survival, twist PDE, κ sweeps
   conduit/              # ConduitConfig, GoldenAngleMixin, GaugePointerMixin
   utils/                # cartesian/polar grids, FFT Laplacian
+examples/
+  quickstart.py
+  consumer_mixin_pattern.py
 ```
 
 ## Quick start
 
-```python
-from flux_hopf_lib import PHI, R_RESIDUAL, E_INV2, DEFAULT_KAPPA
-from flux_hopf_lib.quaternion import Quaternion, small_rotor, q_mult
-from flux_hopf_lib.hopf import hopf_map_from_angles
-from flux_hopf_lib.flux import FluxLatticeConfig, FluxFlywheel
-from flux_hopf_lib.simulation import (
-    steps_for_lambda_t,
-    simulate_twist_pde_survival,
-    evolve_gauged_twist_survival,
-    compare_to_analogs,
-)
-from flux_hopf_lib.conduit import apply_golden_angle_increment, ConduitConfig
-
-# Survival horizon at λt = 2
-n = steps_for_lambda_t(lambda_t_target=2.0, kappa=0.85, dt=0.001)
-
-# Lightweight gauged-twist probe (numpy)
-out = evolve_gauged_twist_survival(n_steps=200, n_identities=32, seed=42)
-print(out["identity_survival"], compare_to_analogs(out["identity_residual"]))
-
-# Twist PDE on a small T³ (for tests; use larger nx in research scripts)
-pde = simulate_twist_pde_survival(nx=12, normalize_to_lambda_t=2.0, seed=0)
-print(pde["survival"]["mean_survival"], "vs e^{-2} =", E_INV2)
+```bash
+python examples/quickstart.py
 ```
 
-## What stays in consumer repos
+```python
+from flux_hopf_lib.simulation import steps_for_lambda_t, evolve_gauged_twist_survival
 
-| Repo | Keeps |
+n = steps_for_lambda_t(lambda_t_target=2.0, kappa=0.85, dt=0.001)
+out = evolve_gauged_twist_survival(n_steps=n, n_identities=32, seed=42)
+print(out["identity_survival"])
+```
+
+## What belongs where
+
+| In **flux_hopf_lib** (core) | In **leaf** repos |
+|-----------------------------|-------------------|
+| Quaternion / Rodrigues | Full `RubikConeConduit` + training (toe) |
+| Hopf maps, hopfions, linking | VQC/OAM encoding, ICA demixing (vqc_*) |
+| Flux lattice / gauge / defects | Analog-gravity / warp solvers (hfb) |
+| λt survival, twist PDE, κ sweeps | Gradio / Streamlit UIs (kingdom, HF Spaces) |
+| ConduitConfig + mixins | HF Space storytelling, papers, Ray demos |
+| Grids / FFT Laplacian | |
+
+## Migration status
+
+| Repo | Status |
 |------|--------|
-| **toe** | Full `RubikConeConduit` / `TwistedHelicalConduit` (torch, Ray, TNN stack), training configs, papers |
-| **mystery** | φ-e-π analysis scripts, Gradio space, synthesis notes — import survival/κ from this lib |
-| **vqc_proto** | Orbital Braille pipelines, LG modes, QEC, typehead SLM |
-| **hfb** | Analog gravity, BEC, craft, electro-vibrational, bubble solvers |
-| **kingdom** | Unifying Gradio portal / visualization |
+| **mystery** | ✓ `flux_hopf_lib.simulation` (no toe path hacks for survival) |
+| **toe** | ✓ `relaxation_survival` shim; golden-angle + GaugePointerMixin |
+| **vqc_proto** | ✓ Quaternion codec re-export |
+| **vqc_sims_public** | ✓ `quaternion_core` re-export |
+| **hfb** | ✓ hopf / grid / defect shims |
+| **kingdom** | ✓ constants + hopf + quaternion for portal demos |
 
-## Migration order
-
-1. **mystery** (biggest path-hack pain → toe)
-2. **toe** (re-export or thin-wrap core; keep full conduit classes)
-3. **vqc_proto** / **vqc_sims_public**
-4. **hfb**
-5. **kingdom**
-
-See [docs/MIGRATION.md](docs/MIGRATION.md) for concrete import rewrites.
+Details: [docs/MIGRATION.md](docs/MIGRATION.md).
 
 ## Development workflow
 
-```text
-                    ┌─────────────────────┐
-                    │   flux_hopf_lib     │  ← single source of truth
-                    │   (this package)    │
-                    └──────────┬──────────┘
-           pip install -e .    │
-     ┌─────────────┬───────────┼───────────┬──────────────┐
-     ▼             ▼           ▼           ▼              ▼
-   mystery        toe      vqc_proto      hfb          kingdom
-  (probes)     (conduit)   (OAM/VQC)   (bubbles)      (portal)
-```
-
-- Evolve foundational math **only** here.
-- Bump version when κ defaults, residual formulas, or PDE conventions change.
-- Prefer editable installs while iterating; pin versions for HF Spaces / papers.
+1. Change foundational math **only** in this repo.
+2. Run `pytest` and `python examples/quickstart.py`.
+3. Tag a release when κ / R / PDE conventions change (`v0.1.x`).
+4. Consumers: editable install while iterating; pin `@v0.1.0` on HF Spaces / papers.
 
 ## Tests
 
@@ -140,12 +150,14 @@ pytest
 
 MIT — see [LICENSE](LICENSE).
 
-## Ecosystem
+## Ecosystem links
 
 | Repo | URL |
 |------|-----|
+| flux_hopf_lib | https://github.com/kinaar8340/flux_hopf_lib |
 | toe | https://github.com/kinaar8340/toe |
 | mystery | https://github.com/kinaar8340/mystery |
 | hfb | https://github.com/kinaar8340/hfb |
 | vqc_proto | https://github.com/kinaar8340/vqc_proto |
-| kingdom | https://github.com/kinaar8340/kingdom (local portal) |
+| vqc_sims_public | https://github.com/kinaar8340/vqc_sims_public |
+| kingdom_come | https://github.com/kinaar8340/kingdom_come |

@@ -1,11 +1,25 @@
 # Migrating consumers to flux_hopf_lib
 
+## Status (2026-07)
+
+| Consumer | Migration |
+|----------|-----------|
+| mystery | **done** |
+| toe | **done** (shim + mixins; full RubikCone stays local) |
+| vqc_proto | **done** |
+| vqc_sims_public | **done** |
+| hfb | **done** |
+| kingdom | **done** |
+
+Ongoing: more PDE helpers / invariants move into core as they prove shared.
+
 ## Principle
 
-1. Install `flux-hopf-lib` (editable during development).
+1. Install `flux-hopf-lib` (editable during development; pin `@v0.1.0` for HF).
 2. Replace `sys.path` / `importlib` loads of sibling repo files with package imports.
 3. Keep specialized classes in their repos; only shared primitives move here.
 4. Optionally leave thin re-exports in the old modules for one release cycle.
+5. **Depend on the core, not on sibling repos**, for quaternion / Hopf / survival math.
 
 ---
 
