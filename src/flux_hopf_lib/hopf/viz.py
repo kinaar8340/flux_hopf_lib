@@ -1185,10 +1185,13 @@ def _create_fiber_figure_2d(
     axis_range: tuple[float, float] | None = None,
     highlight: np.ndarray | None = None,
     phase_point: tuple[float, float] | None = None,
+    phase_trail: np.ndarray | None = None,
+    family_opacity: float | None = None,
 ) -> Any:
     """Single high-quality HF-safe 2D Plotly figure (stereographic xy)."""
     go, _ = _require_plotly()
     fig = go.Figure()
+    fam_op = float(family_opacity) if family_opacity is not None else float(opacity)
     for i, curve in enumerate(curves):
         color = (colors or FIBER_COLORS)[i % len(colors or FIBER_COLORS)]
         fig.add_trace(
@@ -1197,7 +1200,7 @@ def _create_fiber_figure_2d(
                 y=curve[:, 1],
                 mode="lines",
                 line=dict(color=color, width=line_width),
-                opacity=opacity,
+                opacity=fam_op,
                 name=f"Fiber {i + 1}",
                 showlegend=False,
                 hoverinfo="skip",
@@ -1209,8 +1212,21 @@ def _create_fiber_figure_2d(
                 x=highlight[:, 0],
                 y=highlight[:, 1],
                 mode="lines",
-                line=dict(color=ACCENT_GOLD, width=line_width + 2.0),
+                line=dict(color=ACCENT_GOLD, width=line_width + 2.5),
                 name="highlight",
+                opacity=0.95,
+            )
+        )
+    # Growing trail along the fiber (makes gauge_twist / phase motion obvious)
+    if phase_trail is not None and len(phase_trail) >= 2:
+        fig.add_trace(
+            go.Scatter(
+                x=phase_trail[:, 0],
+                y=phase_trail[:, 1],
+                mode="lines",
+                line=dict(color="#ef553b", width=line_width + 4.0),
+                name="phase trail",
+                opacity=1.0,
             )
         )
     if phase_point is not None:
@@ -1219,9 +1235,14 @@ def _create_fiber_figure_2d(
                 x=[phase_point[0]],
                 y=[phase_point[1]],
                 mode="markers",
-                marker=dict(size=12, color=ACCENT_GOLD, line=dict(width=1, color="#0a1628")),
+                marker=dict(
+                    size=18,
+                    color="#ef553b",
+                    symbol="diamond",
+                    line=dict(width=2, color=ACCENT_GOLD),
+                ),
                 name="phase",
-                showlegend=False,
+                showlegend=True,
             )
         )
 
@@ -1297,30 +1318,39 @@ def create_hopf_fiber_animation_frames(
     base_xyz = [_fiber_xyz(f, projection_scale) for f in base]
     colors = [_fiber_color(i, f, color_by) for i, f in enumerate(base)]
 
-    # Precompute all transformed curves + optional highlight
+    # Precompute all transformed curves + optional highlight / phase trail
     frame_curves: list[list[np.ndarray]] = []
     highlights: list[np.ndarray | None] = []
     phase_pts: list[tuple[float, float] | None] = []
+    phase_trails: list[np.ndarray | None] = []
+    family_ops: list[float] = []
     subtitles: list[str] = []
 
     for fi in range(n_frames):
         t = fi / max(n_frames - 1, 1)
         if resolved == "twist":
+            # Full 2π family rotation — very obvious motion
             phase = 2.0 * np.pi * t
             curves = [
-                _apply_twist_xyz(xyz, phase + i * 0.28) for i, xyz in enumerate(base_xyz)
+                _apply_twist_xyz(xyz, phase + i * (2.0 * np.pi / max(n_fibers, 1)))
+                for i, xyz in enumerate(base_xyz)
             ]
             highlights.append(None)
             phase_pts.append(None)
-            subtitles.append(f"twist φ={phase:.2f}")
+            phase_trails.append(None)
+            family_ops.append(float(opacity))
+            subtitles.append(f"φ={phase:.2f} rad")
         elif resolved == "gauge_evolution":
-            kappa = 0.78 + 0.18 * np.sin(2.0 * np.pi * t)
+            # Stronger breathing so frames are clearly different
+            kappa = 0.55 + 0.45 * (0.5 + 0.5 * np.sin(2.0 * np.pi * t))
             curves = [_apply_gauge_scale_xyz(xyz, kappa) for xyz in base_xyz]
             highlights.append(None)
             phase_pts.append(None)
-            subtitles.append(f"gauge κ={kappa:.3f}")
+            phase_trails.append(None)
+            family_ops.append(float(opacity))
+            subtitles.append(f"κ={kappa:.3f}")
         else:
-            # Highlight-evolution modes: fixed family + moving gold fiber
+            # Highlight-evolution modes: dim family + moving gold fiber / phase head
             curves = list(base_xyz)
             geom: AnimMode = "eta_breath" if resolved == "hopfion_spin" else resolved
             if geom not in ("xi1_orbit", "eta_breath", "gauge_twist"):
@@ -1328,13 +1358,21 @@ def create_hopf_fiber_animation_frames(
             e, x = _anim_highlight_params(geom, fi, n_frames, eta0=eta, xi1_0=xi1)
             h = sample_fiber(e, x, n_points=pts, scale=2.0)
             hxyz = _fiber_xyz(h, projection_scale)
-            highlights.append(hxyz)
             if geom == "gauge_twist":
-                k = int(t * (len(hxyz) - 1))
+                # Fiber curve is fixed; animate a growing trail + large head along ξ₂
+                k = max(2, int(t * (len(hxyz) - 1)))
+                highlights.append(hxyz)
+                phase_trails.append(hxyz[: k + 1])
                 phase_pts.append((float(hxyz[k, 0]), float(hxyz[k, 1])))
+                family_ops.append(0.28)  # dim family so trail pops
+                subtitles.append(f"ξ₂ progress {100 * t:.0f}%  · η={e:.2f}")
             else:
-                phase_pts.append(None)
-            subtitles.append(f"η={e:.2f} ξ₁={x:.2f}")
+                highlights.append(hxyz)
+                phase_trails.append(None)
+                # Moving "head" at first point of highlight for extra motion cue
+                phase_pts.append((float(hxyz[0, 0]), float(hxyz[0, 1])))
+                family_ops.append(0.35)
+                subtitles.append(f"η={e:.2f}  ξ₁={x:.2f}")
         frame_curves.append(curves)
 
     axis_range: tuple[float, float] | None = None
@@ -1368,6 +1406,8 @@ def create_hopf_fiber_animation_frames(
                 axis_range=axis_range,
                 highlight=highlights[fi],
                 phase_point=phase_pts[fi],
+                phase_trail=phase_trails[fi],
+                family_opacity=family_ops[fi],
             )
         )
     return frames

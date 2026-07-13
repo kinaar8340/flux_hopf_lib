@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Planned
 - Companion WebGPU / shaders.com explorer consuming `export_fiber_curves` (scaffolded)
 
+## [0.2.6] — 2026-07-12
+
+### Fixed
+- **gauge_twist** looked frozen (η/ξ₁ fixed; only a tiny phase marker moved). Now draws a
+  growing red phase trail + large diamond head so motion is obvious.
+- Stronger **gauge_evolution** breathing amplitude; clearer **twist** family spin offsets.
+
 ## [0.2.5] — 2026-07-12
 
 ### Added / Changed
@@ -103,7 +110,8 @@ Initial public foundation for the Hopf / flux / quaternion / conduit ecosystem.
 - Consumer repos and HF Spaces pin `@v0.1.0` (git) until PyPI install is preferred.
 - Breaking changes to κ / R / PDE conventions require a minor or major bump and pin updates.
 
-[Unreleased]: https://github.com/kinaar8340/flux_hopf_lib/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/kinaar8340/flux_hopf_lib/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.5
 [0.2.4]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.4
 [0.2.3]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.3
 [0.2.2]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.2

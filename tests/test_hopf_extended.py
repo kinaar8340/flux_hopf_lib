@@ -274,3 +274,23 @@ def test_twist_frames_differ():
     x0 = list(frames[0].data[0].x[:5])
     x1 = list(frames[1].data[0].x[:5])
     assert x0 != x1
+
+
+def test_gauge_twist_phase_trail_moves():
+    """gauge_twist used to look frozen — trail/head must advance."""
+    pytest.importorskip("plotly")
+    from flux_hopf_lib.hopf.viz import create_hopf_fiber_animation_frames
+
+    frames = create_hopf_fiber_animation_frames(
+        n_fibers=3, n_points=50, n_frames=6, mode="gauge_twist", height=280
+    )
+    # Find phase trail or phase marker traces
+    def phase_xy(fig):
+        for tr in fig.data:
+            if tr.name in ("phase", "phase trail"):
+                return list(tr.x[-1:]), list(tr.y[-1:])
+        return None
+
+    a, b = phase_xy(frames[1]), phase_xy(frames[4])
+    assert a is not None and b is not None
+    assert a != b
