@@ -8,8 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Interactive Plotly S² → fiber explorer for HF Spaces
 - Animated gauge-flow / fiber-twist demos
+
+## [0.2.1] — 2026-07-12
+
+HF-safe Plotly dashboards and interactive S² fiber explorer.
+
+### Added
+- **hopf/viz.py**: `plot_hopf_fibers_dashboard` — 2×2 WebGL-free multi-panel (xy, xz, S² base, highlight phase)
+- **hopf/viz.py**: `plot_hopf_s2_fiber_explorer` — stereographic + S² disk with `customdata` for Gradio/Dash selection
+- **hopf/viz.py**: `s2_to_hopf_angles`, `fiber_family_choices` helpers for portal dropdown UIs
+- Theme dict support on new Plotly builders (kingdom dark theme passthrough)
+
+### Notes
+- Consumers / HF Spaces that use the kingdom Hopf portal should pin `flux-hopf-lib==0.2.1` (or newer).
 
 ## [0.2.0] — 2026-07-13
 
@@ -47,6 +59,7 @@ Initial public foundation for the Hopf / flux / quaternion / conduit ecosystem.
 - Consumer repos and HF Spaces pin `@v0.1.0` (git) until PyPI install is preferred.
 - Breaking changes to κ / R / PDE conventions require a minor or major bump and pin updates.
 
-[Unreleased]: https://github.com/kinaar8340/flux_hopf_lib/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/kinaar8340/flux_hopf_lib/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.1
 [0.2.0]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.0
 [0.1.0]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.1.0

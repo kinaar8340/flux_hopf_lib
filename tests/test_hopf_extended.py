@@ -96,3 +96,46 @@ def test_viz_matplotlib_smoke():
     import matplotlib.pyplot as plt
 
     plt.close("all")
+
+
+def test_s2_to_hopf_angles_range():
+    from flux_hopf_lib.hopf.viz import s2_to_hopf_angles
+
+    eta, xi1 = s2_to_hopf_angles(0.5, 0.5, 0.7071)
+    assert 0.05 <= eta <= 1.45
+    assert 0.0 <= xi1 < 2.0 * math.pi
+
+
+def test_fiber_family_choices():
+    from flux_hopf_lib.hopf.viz import fiber_family_choices
+
+    choices = fiber_family_choices(n_fibers=6, n_points=20)
+    assert len(choices) == 6
+    label, eta, xi1 = choices[0]
+    assert "η=" in label
+    assert 0.0 < eta < math.pi / 2
+    assert 0.0 <= xi1 < 2.0 * math.pi
+
+
+def test_viz_plotly_dashboard_and_explorer():
+    pytest.importorskip("plotly")
+    from flux_hopf_lib.hopf.viz import (
+        plot_hopf_fibers_dashboard,
+        plot_hopf_s2_fiber_explorer,
+    )
+
+    dash = plot_hopf_fibers_dashboard(n_fibers=4, n_points=40, height=400)
+    assert dash is not None
+    assert len(dash.data) >= 4
+
+    explorer = plot_hopf_s2_fiber_explorer(
+        n_fibers=5, n_points=40, selected_eta=0.5, selected_xi1=1.0, height=400
+    )
+    assert explorer is not None
+    # Base markers carry customdata for Gradio / dropdown handlers
+    base_traces = [
+        t for t in explorer.data if getattr(t, "customdata", None) is not None
+    ]
+    assert len(base_traces) >= 1
+    cd = base_traces[0].customdata
+    assert cd is not None and len(cd[0]) >= 5

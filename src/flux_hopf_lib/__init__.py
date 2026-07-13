@@ -34,7 +34,7 @@ from flux_hopf_lib.constants import (
     W_G_LOCK,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 __all__ = [
     "__version__",

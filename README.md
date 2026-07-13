@@ -8,7 +8,7 @@
 **Shared core library** for the Hopf / flux / quaternion / conduit ecosystem
 ([kinaar8340](https://github.com/kinaar8340)).
 
-**Version:** [`0.2.0`](https://github.com/kinaar8340/flux_hopf_lib) (PyPI: `0.1.0` until next publish) · **Role:** single source of truth for foundational math.
+**Version:** [`0.2.1`](https://github.com/kinaar8340/flux_hopf_lib) · **Role:** single source of truth for foundational math.
 
 Specialized experiments, Gradio portals, and full model stacks stay in consumer
 repos. Consumers depend on **this package**, not on each other, for shared
@@ -46,7 +46,7 @@ pip install -e ".[torch]"
 
 ```bash
 # Production / HF Spaces / paper reproduction
-pip install flux-hopf-lib==0.1.0
+pip install flux-hopf-lib==0.2.1
 
 # Local core development (editable)
 pip install -e ../flux_hopf_lib
@@ -54,7 +54,7 @@ pip install -e ../flux_hopf_lib
 
 ```text
 # requirements.txt / pyproject.toml / HF Space
-flux-hopf-lib==0.1.0
+flux-hopf-lib==0.2.1
 ```
 
 - PyPI: https://pypi.org/project/flux-hopf-lib/
@@ -85,7 +85,11 @@ from flux_hopf_lib.simulation import (
 )
 
 # Optional visualizations (pip install 'flux-hopf-lib[viz]')
-# from flux_hopf_lib.hopf.viz import plot_hopf_fibers_stereographic
+# from flux_hopf_lib.hopf.viz import (
+#     plot_hopf_fibers_stereographic,
+#     plot_hopf_fibers_dashboard,   # HF-safe 2×2 Plotly
+#     plot_hopf_s2_fiber_explorer, # S² base picker
+# )
 from flux_hopf_lib.conduit import (
     ConduitConfig,
     GoldenAngleMixin,

@@ -14,8 +14,10 @@ import matplotlib
 matplotlib.use("Agg")
 
 from flux_hopf_lib.hopf.viz import (
+    plot_hopf_fibers_dashboard,
     plot_hopf_fibers_multi_view,
     plot_hopf_fibers_stereographic,
+    plot_hopf_s2_fiber_explorer,
     plot_hopfion_director_slice,
     plot_linking_curves,
 )
@@ -33,6 +35,17 @@ def main() -> None:
     fig3.savefig(OUT / "hopfion_director_slice.png", dpi=120)
     fig4 = plot_linking_curves(n_points=160)
     fig4.savefig(OUT / "hopf_linking.png", dpi=120)
+
+    # HF-safe Plotly builders (HTML snapshots)
+    try:
+        dash = plot_hopf_fibers_dashboard(n_fibers=8, n_points=80, height=500)
+        dash.write_html(str(OUT / "hopf_dashboard.html"), include_plotlyjs="cdn")
+        exp = plot_hopf_s2_fiber_explorer(n_fibers=10, n_points=80, height=480)
+        exp.write_html(str(OUT / "hopf_s2_explorer.html"), include_plotlyjs="cdn")
+        print("Wrote Plotly HTML dashboards")
+    except ImportError:
+        print("plotly not installed — skipped dashboard/explorer HTML")
+
     print(f"Wrote figures under {OUT}")
 
 
