@@ -5,7 +5,7 @@
 | Layer | Technology | Purpose | Status |
 |-------|------------|---------|--------|
 | **Core library** (`flux_hopf_lib[viz]`) | Python · Matplotlib · Plotly | Scientific reproducibility, Gradio / HF Spaces, Kingdom portal | **Official supported viz** |
-| **Premium explorer** (companion) | WebGPU / shaders.com · Three.js (or similar) | Real-time 3D, large fiber counts, advanced effects | Separate repo / Space — **not** in core |
+| **Premium explorer** (companion) | WebGPU / shaders.com · Three.js (or similar) | Real-time 3D, large fiber counts, advanced effects | **[flux-hopf-explorer](https://github.com/kinaar8340/flux_hopf_explorer)** — **not** in core |
 
 ### Why separate?
 
@@ -18,8 +18,8 @@
   ├── hopf.fibration     geometry + export_fiber_curves  ──┐
   └── hopf.viz [viz]     matplotlib / plotly              │
                                                           │ JSON / arrays
-  companion (future)                                      │
-  └── flux-hopf-explorer / HF Space  ◄── WebGPU/shaders ──┘
+  companion                                               │
+  └── flux-hopf-explorer  ◄── Three.js / WebGPU / shaders.com ──┘
 ```
 
 ## Core `[viz]` roadmap

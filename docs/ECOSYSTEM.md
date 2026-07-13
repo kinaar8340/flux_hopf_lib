@@ -23,7 +23,7 @@ integrations only (never for shared math).
 |-------|---------|------|
 | Core | **flux_hopf_lib** | Constants, quaternions, Hopf maps, gauge/flux primitives, λt survival, PDE step, conduit mixins, grids |
 | Core viz | **flux_hopf_lib[viz]** | Matplotlib + Plotly (HF-safe 2D dashboards, S² explorer, animations); geometry export for web |
-| Premium 3D (planned) | **companion** (e.g. flux-hopf-explorer) | WebGPU / shaders.com / Three.js — **not** in the core package |
+| Premium 3D | **[flux-hopf-explorer](https://github.com/kinaar8340/flux_hopf_explorer)** | WebGPU / shaders.com / Three.js — loads `export_fiber_curves` JSON |
 | Theory / lattice | **toe** | Full conduit NN stack, epoch clock, papers, Ray demos |
 | Emergent signatures | **mystery** | Probes, residual synthesis, HF Space storytelling |
 | Photonic VQC demos | **vqc_proto** | Encoding pipelines, LG/OAM, typehead, QEC stubs |
