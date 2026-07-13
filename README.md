@@ -8,7 +8,7 @@
 **Shared core library** for the Hopf / flux / quaternion / conduit ecosystem
 ([kinaar8340](https://github.com/kinaar8340)).
 
-**Version:** [`0.1.0` on PyPI](https://pypi.org/project/flux-hopf-lib/) · **Role:** single source of truth for foundational math.
+**Version:** [`0.2.0`](https://github.com/kinaar8340/flux_hopf_lib) (PyPI: `0.1.0` until next publish) · **Role:** single source of truth for foundational math.
 
 Specialized experiments, Gradio portals, and full model stacks stay in consumer
 repos. Consumers depend on **this package**, not on each other, for shared
@@ -45,20 +45,20 @@ pip install -e ".[torch]"
 **Consumer repos:**
 
 ```bash
+# Production / HF Spaces / paper reproduction
+pip install flux-hopf-lib==0.1.0
+
+# Local core development (editable)
 pip install -e ../flux_hopf_lib
-# or pin a release tag:
-# pip install "flux-hopf-lib @ git+https://github.com/kinaar8340/flux_hopf_lib.git@v0.1.0"
 ```
 
 ```text
-# requirements.txt / HF Space (git pin — works today)
-flux-hopf-lib @ git+https://github.com/kinaar8340/flux_hopf_lib.git@v0.1.0
-
-# After PyPI Trusted Publishing is live:
-# flux-hopf-lib==0.1.0
+# requirements.txt / pyproject.toml / HF Space
+flux-hopf-lib==0.1.0
 ```
 
-Publishing: [docs/PUBLISHING.md](docs/PUBLISHING.md) · [CHANGELOG.md](CHANGELOG.md)
+- PyPI: https://pypi.org/project/flux-hopf-lib/
+- Publishing: [docs/PUBLISHING.md](docs/PUBLISHING.md) · [CHANGELOG.md](CHANGELOG.md)
 
 ## Recommended import style
 
@@ -67,14 +67,25 @@ Keep the namespace **flat and predictable**:
 ```python
 from flux_hopf_lib import PHI, R_RESIDUAL, E_INV2, DEFAULT_KAPPA
 from flux_hopf_lib.quaternion import Quaternion, small_rotor, q_mult
-from flux_hopf_lib.hopf import hopf_map, hopf_map_from_angles, toroidal_hopfion_director
+from flux_hopf_lib.hopf import (
+    hopf_map,
+    hopf_map_from_angles,
+    sample_fiber_family,
+    stereographic_project,
+    toroidal_hopfion_director,
+    wg_from_base,
+)
 from flux_hopf_lib.flux import FluxLatticeConfig, FluxFlywheel, gaussian_defect
 from flux_hopf_lib.simulation import (
     steps_for_lambda_t,
     evolve_gauged_twist_survival,
     simulate_twist_pde_survival,
     compare_to_analogs,
+    zero_mode_survival_continuous,
 )
+
+# Optional visualizations (pip install 'flux-hopf-lib[viz]')
+# from flux_hopf_lib.hopf.viz import plot_hopf_fibers_stereographic
 from flux_hopf_lib.conduit import (
     ConduitConfig,
     GoldenAngleMixin,
@@ -94,14 +105,15 @@ imports keep working while you migrate.
 src/flux_hopf_lib/
   constants.py          # φ, e, π, R residual, κ defaults, W_g lock
   quaternion/           # Quaternion, q_mult, rotors, encode_shard (+ torch_ops)
-  hopf/                 # Hopf map, linking, hopfion directors
+  hopf/                 # maps, fibers, stereographic, hopfions, invariants, viz
   flux/                 # FluxLatticeConfig, gauge steps, defect densities
-  simulation/           # λt normalization, survival, twist PDE, κ sweeps
+  simulation/           # λt survival, twist PDE, mean-mode ODE, κ sweeps
   conduit/              # ConduitConfig, GoldenAngleMixin, GaugePointerMixin
   utils/                # cartesian/polar grids, FFT Laplacian
 examples/
   quickstart.py
   consumer_mixin_pattern.py
+  hopf_viz_demo.py      # requires [viz]
 ```
 
 ## Quick start

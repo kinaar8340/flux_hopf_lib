@@ -80,6 +80,32 @@ def gauge_restoring_alpha(
     return float(-gauge_strength * avg_imbalance - kappa * avg_imbalance * kappa_weight)
 
 
+def mean_field_gauge_torque(bar_theta: float, kappa: float = DEFAULT_KAPPA) -> float:
+    """PDE mean-field gauge term −κ θ̄ (restoring torque on global mean twist)."""
+    return float(-kappa * bar_theta)
+
+
+def pointer_damping(
+    alpha: float,
+    *,
+    scale: float = 6.0,
+) -> float:
+    """Map gauge alpha → bounded pointer signal in (−1, 1) via tanh."""
+    return float(np.tanh(alpha * scale))
+
+
+def kappa_from_lambda(
+    characteristic_rate: float,
+) -> float:
+    """Inverse of mean-field identification λ ≈ κ."""
+    return float(characteristic_rate)
+
+
+def lambda_from_kappa(kappa: float = DEFAULT_KAPPA) -> float:
+    """Mean-field characteristic rate λ ≈ κ."""
+    return float(kappa)
+
+
 def two_gyro_gauge_step(
     current_q: Array,
     twist_history: Array | list[float],

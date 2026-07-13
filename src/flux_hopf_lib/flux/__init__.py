@@ -12,6 +12,10 @@ from flux_hopf_lib.flux.lattice import (
     FluxLatticeConfig,
     GaugeStepResult,
     gauge_restoring_alpha,
+    kappa_from_lambda,
+    lambda_from_kappa,
+    mean_field_gauge_torque,
+    pointer_damping,
     two_gyro_gauge_step,
 )
 
@@ -20,6 +24,10 @@ __all__ = [
     "FluxFlywheel",
     "GaugeStepResult",
     "gauge_restoring_alpha",
+    "mean_field_gauge_torque",
+    "pointer_damping",
+    "kappa_from_lambda",
+    "lambda_from_kappa",
     "two_gyro_gauge_step",
     "gaussian_defect",
     "exponential_ring",

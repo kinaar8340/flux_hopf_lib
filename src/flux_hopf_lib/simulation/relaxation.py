@@ -65,6 +65,68 @@ def twist_pde_step(
     return np.clip(theta, 0.01, 2 * PI - 0.01)
 
 
+def mean_cot_grad_flux(theta: Array, D: float = 0.05) -> float:
+    """Mean cot-flux diagnostic M = ⟨cot(θ/2) |∇θ|²⟩ (PDE nonlinear term scale)."""
+    with np.errstate(divide="ignore", invalid="ignore"):
+        cot = np.cos(theta / 2.0) / np.maximum(np.sin(theta / 2.0), 1e-8)
+        g2 = (
+            np.gradient(theta, axis=0) ** 2
+            + np.gradient(theta, axis=1) ** 2
+            + np.gradient(theta, axis=2) ** 2
+        )
+        # sum over gradient components already; reduce spatial mean
+        if g2.ndim == 4:
+            g2 = g2.sum(axis=0)
+        return float(np.mean(cot * g2) * D / 2.0)
+
+
+def zero_mode_survival_euler(
+    kappa: float,
+    theta0_mean: float,
+    *,
+    delta_omega: float = 0.002,
+    lambda_t: float = 2.0,
+    dt: float = 0.001,
+    cot_flux: float = 0.0,
+) -> float:
+    """
+    Discrete Euler integration of mean-mode ODE:
+
+        dθ̄/dt = Δω − κ θ̄ + cot_flux
+
+    Returns θ̄(T) / θ0_mean at horizon T = λt / κ.
+    """
+    t_phys = lambda_t / max(kappa, 1e-12)
+    n_steps = max(1, int(round(t_phys / dt)))
+    th = float(theta0_mean)
+    for _ in range(n_steps):
+        th = th + dt * (delta_omega - kappa * th + cot_flux)
+    if abs(theta0_mean) < 1e-12:
+        return 0.0
+    return float(th / theta0_mean)
+
+
+def zero_mode_survival_continuous(
+    kappa: float,
+    theta0_mean: float,
+    *,
+    delta_omega: float = 0.002,
+    lambda_t: float = 2.0,
+    cot_flux: float = 0.0,
+) -> float:
+    """
+    Closed-form mean-mode survival for constant cot_flux:
+
+        θ̄(t) = θ_eq + (θ0 − θ_eq) e^{−κ t},  θ_eq = (Δω + cot_flux)/κ
+    """
+    t_phys = lambda_t / max(kappa, 1e-12)
+    theta_eq = (delta_omega + cot_flux) / max(kappa, 1e-12)
+    th = theta_eq + (theta0_mean - theta_eq) * np.exp(-kappa * t_phys)
+    if abs(theta0_mean) < 1e-12:
+        return 0.0
+    return float(th / theta0_mean)
+
+
 def simulate_twist_pde(
     nx: int = 20,
     nt: int = 2000,
