@@ -905,14 +905,18 @@ def create_plotly_fiber_animation(
     title: str | None = None,
     theme: dict[str, Any] | None = None,
     use_lod: bool = True,
+    frame_ms: int = 80,
 ) -> Any:
     """
-    Plotly figure with playable frames (HF Gradio-friendly via ``gr.Plot``).
+    Plotly figure with playable frames (2D stereographic xy).
+
+    **Gradio note:** ``gr.Plot`` often breaks Plotly's client-side ``animate``
+    method (Play button appears but does nothing). Prefer embedding via
+    ``fig.to_html(include_plotlyjs="cdn", full_html=False)`` into ``gr.HTML``
+    — see kingdom portal.
 
     Same modes as :func:`animate_hopf_fibers` except ``hopfion_spin`` falls back
-    to a 2D quiver-less η-breath style highlight (use matplotlib for hopfion).
-
-    WebGL-free: uses 2D stereographic xy projections for Space reliability.
+    to a 2D-safe ``eta_breath`` highlight.
     """
     go, _ = _require_plotly()
     if mode == "hopfion_spin":
@@ -922,10 +926,17 @@ def create_plotly_fiber_animation(
     fibers = sample_fiber_family_cached(n_fibers=n_fibers, n_points=pts, scale=2.0)
     fibers = [apply_fiber_lod(f, pts) for f in fibers]
 
-    # Base frame: family + initial highlight
-    e0, x0 = _anim_highlight_params(mode, 0, n_frames, eta0=eta, xi1_0=xi1)
-    h0 = sample_fiber(e0, x0, n_points=pts, scale=2.0)
+    # Precompute highlight curve per frame (full x/y — more reliable than partial frames)
+    frame_curves: list[tuple[np.ndarray, np.ndarray, float, float, int]] = []
+    for fi in range(n_frames):
+        e, x = _anim_highlight_params(mode, fi, n_frames, eta0=eta, xi1_0=xi1)
+        h = sample_fiber(e, x, n_points=pts, scale=2.0)
+        hx = np.asarray(h["px"]) * projection_scale
+        hy = np.asarray(h["py"]) * projection_scale
+        k = int((fi / max(n_frames, 1)) * (len(hx) - 1)) if mode == "gauge_twist" else 0
+        frame_curves.append((hx, hy, e, x, k))
 
+    hx0, hy0, e0, x0, k0 = frame_curves[0]
     fig = go.Figure()
     for i, fiber in enumerate(fibers):
         color = FIBER_COLORS[i % len(FIBER_COLORS)]
@@ -943,19 +954,17 @@ def create_plotly_fiber_animation(
         )
     fig.add_trace(
         go.Scatter(
-            x=np.asarray(h0["px"]) * projection_scale,
-            y=np.asarray(h0["py"]) * projection_scale,
+            x=hx0,
+            y=hy0,
             mode="lines",
             line=dict(color=ACCENT_GOLD, width=4),
             name="highlight",
         )
     )
-    # Optional phase marker for gauge_twist
-    k0 = 0
     fig.add_trace(
         go.Scatter(
-            x=[float(np.asarray(h0["px"])[k0] * projection_scale)],
-            y=[float(np.asarray(h0["py"])[k0] * projection_scale)],
+            x=[float(hx0[k0])],
+            y=[float(hy0[k0])],
             mode="markers",
             marker=dict(size=10, color=ACCENT_GOLD),
             name="phase",
@@ -963,59 +972,70 @@ def create_plotly_fiber_animation(
         )
     )
 
+    # Static family traces + full highlight/phase data in every frame (no partial-update bugs)
+    family_data = list(fig.data[:n_fibers])
     frames = []
-    for fi in range(n_frames):
-        e, x = _anim_highlight_params(mode, fi, n_frames, eta0=eta, xi1_0=xi1)
-        h = sample_fiber(e, x, n_points=pts, scale=2.0)
-        hx = np.asarray(h["px"]) * projection_scale
-        hy = np.asarray(h["py"]) * projection_scale
-        k = int((fi / max(n_frames, 1)) * (len(hx) - 1)) if mode == "gauge_twist" else 0
-        # Only update highlight + phase traces (indices n_fibers, n_fibers+1)
+    base_title = title or f"Hopf animation — {mode}"
+    for fi, (hx, hy, e, x, k) in enumerate(frame_curves):
         frames.append(
             go.Frame(
                 name=str(fi),
-                data=[
-                    go.Scatter(x=hx, y=hy),
-                    go.Scatter(x=[float(hx[k])], y=[float(hy[k])]),
+                data=list(family_data)
+                + [
+                    go.Scatter(
+                        x=hx,
+                        y=hy,
+                        mode="lines",
+                        line=dict(color=ACCENT_GOLD, width=4),
+                        name="highlight",
+                    ),
+                    go.Scatter(
+                        x=[float(hx[k])],
+                        y=[float(hy[k])],
+                        mode="markers",
+                        marker=dict(size=10, color=ACCENT_GOLD),
+                        name="phase",
+                        showlegend=False,
+                    ),
                 ],
-                traces=[n_fibers, n_fibers + 1],
-                layout=go.Layout(
-                    title_text=(title or f"Hopf animation — {mode}")
-                    + f"  · η={e:.2f} ξ₁={x:.2f}"
-                ),
+                layout=go.Layout(title_text=f"{base_title}  · η={e:.2f} ξ₁={x:.2f}"),
             )
         )
 
     fig.frames = frames
-    t_title = title or f"Hopf animation — {mode}"
+    frame_names = [str(fi) for fi in range(n_frames)]
+    play_args = {
+        "frame": {"duration": int(frame_ms), "redraw": True},
+        "fromcurrent": True,
+        "mode": "immediate",
+        "transition": {"duration": 0, "easing": "linear"},
+    }
     layout: dict[str, Any] = {
         "height": height,
-        "title": dict(text=t_title, x=0.5, xanchor="center"),
-        "margin": dict(l=40, r=20, t=60, b=40),
-        "xaxis": dict(scaleanchor="y", scaleratio=1, showgrid=True),
-        "yaxis": dict(showgrid=True),
+        "title": dict(text=f"{base_title}  · η={e0:.2f} ξ₁={x0:.2f}", x=0.5, xanchor="center"),
+        "margin": dict(l=40, r=20, t=60, b=80),
+        # Avoid scaleanchor — it can break animate redraw in some Plotly embeds
+        "xaxis": dict(showgrid=True, zeroline=True, scaleanchor="y", scaleratio=1),
+        "yaxis": dict(showgrid=True, zeroline=True),
         "updatemenus": [
             {
                 "type": "buttons",
+                "direction": "left",
                 "showactive": False,
-                "y": 1.12,
+                "y": 1.15,
                 "x": 0.0,
                 "xanchor": "left",
+                "yanchor": "top",
+                "pad": {"r": 10, "t": 0},
                 "buttons": [
                     {
-                        "label": "Play",
+                        "label": "▶ Play",
                         "method": "animate",
-                        "args": [
-                            None,
-                            {
-                                "frame": {"duration": 50, "redraw": True},
-                                "fromcurrent": True,
-                                "transition": {"duration": 0},
-                            },
-                        ],
+                        # Explicit frame list is more reliable than null in iframes
+                        "args": [frame_names, play_args],
                     },
                     {
-                        "label": "Pause",
+                        "label": "⏸ Pause",
                         "method": "animate",
                         "args": [
                             [None],
@@ -1039,7 +1059,9 @@ def create_plotly_fiber_animation(
                     "visible": True,
                     "xanchor": "right",
                 },
-                "pad": {"b": 10, "t": 40},
+                "pad": {"b": 10, "t": 50},
+                "len": 0.9,
+                "x": 0.05,
                 "steps": [
                     {
                         "args": [
@@ -1047,6 +1069,7 @@ def create_plotly_fiber_animation(
                             {
                                 "frame": {"duration": 0, "redraw": True},
                                 "mode": "immediate",
+                                "transition": {"duration": 0},
                             },
                         ],
                         "label": str(fi),
@@ -1058,6 +1081,39 @@ def create_plotly_fiber_animation(
         ],
     }
     if theme:
-        layout.update(theme)
+        # Theme may override title/margin — merge carefully
+        layout.update({k: v for k, v in theme.items() if k not in ("updatemenus", "sliders")})
     fig.update_layout(**layout)
     return fig
+
+
+def plotly_fig_to_html(
+    fig: Any,
+    *,
+    height: int | None = None,
+    include_plotlyjs: str | bool = "cdn",
+) -> str:
+    """
+    Embed a Plotly figure as HTML for Gradio ``gr.HTML``.
+
+    Required for animations: ``gr.Plot`` re-serializes figures and drops working
+    client-side ``Plotly.animate`` bindings in many Gradio/HF iframe setups.
+    """
+    if height is not None:
+        try:
+            fig.update_layout(height=int(height))
+        except Exception:
+            pass
+    inner = fig.to_html(
+        include_plotlyjs=include_plotlyjs,
+        full_html=False,
+        config={
+            "responsive": True,
+            "displayModeBar": True,
+            "displaylogo": False,
+        },
+    )
+    return (
+        '<div class="hopf-plotly-embed" style="width:100%;min-height:480px;">'
+        f"{inner}</div>"
+    )

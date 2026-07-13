@@ -8,8 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Companion WebGPU / shaders.com explorer consuming `export_fiber_curves`
-- Kingdom portal animation tab wired to Plotly fiber animation
+- Companion WebGPU / shaders.com explorer consuming `export_fiber_curves` (scaffolded)
+
+## [0.2.3] — 2026-07-12
+
+### Fixed
+- **hopf/viz.py**: Plotly fiber animation Play reliability — full frame data, explicit frame list, `mode: immediate`
+- **hopf/viz.py**: `plotly_fig_to_html` helper for Gradio/HF (``gr.Plot`` drops working `Plotly.animate`)
+
+### Notes
+- Kingdom Animate view embeds HTML, not `gr.Plot`, so ▶ Play works on Spaces.
 
 ## [0.2.2] — 2026-07-12
 
