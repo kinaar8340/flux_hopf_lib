@@ -46,9 +46,14 @@ pip install -e ../flux_hopf_lib
 ```
 
 ```text
-# requirements.txt / HF Space
+# requirements.txt / HF Space (git pin — works today)
 flux-hopf-lib @ git+https://github.com/kinaar8340/flux_hopf_lib.git@v0.1.0
+
+# After PyPI Trusted Publishing is live:
+# flux-hopf-lib==0.1.0
 ```
+
+Publishing: [docs/PUBLISHING.md](docs/PUBLISHING.md) · [CHANGELOG.md](CHANGELOG.md)
 
 ## Recommended import style
 
