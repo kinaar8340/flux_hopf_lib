@@ -24,10 +24,12 @@
 
 ## Core `[viz]` roadmap
 
-1. **Animation** — `animate_hopf_fibers` (matplotlib), `create_plotly_fiber_animation` (Plotly frames)
-2. **S² explorer** — hover metadata, linked legend groups, LOD + cache
-3. **Large families** — `lod_n_points`, `apply_fiber_lod`, vectorized `sample_fiber_family`, `sample_fiber_family_cached`
-4. **Web export** — `export_fiber_curves` payload for companion frontends
+1. **Animation (recommended)** — `create_hopf_fiber_animation_frames` + Gradio slider (precomputed Plotly figures)
+2. **Animation (native Plotly)** — `create_plotly_fiber_animation` (client Play often broken under `gr.Plot`)
+3. **Animation (export)** — `export_hopf_fiber_animation_mp4` for `gr.Video` / offline
+4. **S² explorer** — hover metadata, linked legend groups, LOD + cache
+5. **Large families** — `lod_n_points`, `apply_fiber_lod`, vectorized sampling + cache
+6. **Web export** — `export_fiber_curves` payload for companion frontends
 
 ## API quick reference
 
@@ -44,11 +46,21 @@ from flux_hopf_lib.hopf import (
 # Optional plotting
 from flux_hopf_lib.hopf.viz import (
     plot_hopf_fibers_stereographic,
-    plot_hopf_fibers_dashboard,      # HF-safe 2×2
-    plot_hopf_s2_fiber_explorer,    # S² picker
-    animate_hopf_fibers,            # matplotlib FuncAnimation
-    create_plotly_fiber_animation,  # Plotly play/pause frames
+    plot_hopf_fibers_dashboard,           # HF-safe 2×2
+    plot_hopf_s2_fiber_explorer,         # S² picker
+    create_hopf_fiber_animation_frames,  # ★ Gradio: bake once, scrub
+    plot_hopf_fiber_animation_slider,    # frames + selected + meta
+    export_hopf_fiber_animation_mp4,     # gr.Video / offline
+    animate_hopf_fibers,                 # matplotlib (avoid in Gradio)
+    create_plotly_fiber_animation,       # native Play (often broken in gr.Plot)
 )
+```
+
+### Gradio animation pattern (best quality on Spaces)
+
+```python
+frames = create_hopf_fiber_animation_frames(n_fibers=12, n_frames=60, mode="xi1_orbit")
+frame_slider.change(lambda i: frames[int(i)], inputs=slider, outputs=plot)
 ```
 
 ### Animation modes

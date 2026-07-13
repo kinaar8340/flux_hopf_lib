@@ -224,3 +224,34 @@ def test_create_plotly_fiber_animation():
     assert getattr(menus[0], "type", None) == "buttons" or (
         isinstance(menus[0], dict) and menus[0].get("type") == "buttons"
     )
+
+
+def test_create_hopf_fiber_animation_frames_precomputed():
+    """Gradio-quality path: list of static figures with fixed axis range."""
+    pytest.importorskip("plotly")
+    from flux_hopf_lib.hopf.viz import (
+        create_hopf_fiber_animation_frames,
+        plot_hopf_fiber_animation_slider,
+    )
+
+    frames = create_hopf_fiber_animation_frames(
+        n_fibers=4,
+        n_points=40,
+        n_frames=8,
+        mode="xi1_orbit",
+        fixed_axis_range=True,
+        height=300,
+    )
+    assert len(frames) == 8
+    # Fixed ranges so scrubbing does not jump
+    r0 = frames[0].layout.xaxis.range
+    r1 = frames[-1].layout.xaxis.range
+    assert r0 is not None and list(r0) == list(r1)
+
+    frames2, fig, meta = plot_hopf_fiber_animation_slider(
+        n_fibers=3, n_points=30, n_frames=6, frame_idx=2, mode="twist"
+    )
+    assert len(frames2) == 6
+    assert meta["frame_idx"] == 2
+    assert meta["mode"] == "gauge_twist"
+    assert fig is frames2[2]

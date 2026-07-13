@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Planned
 - Companion WebGPU / shaders.com explorer consuming `export_fiber_curves` (scaffolded)
 
+## [0.2.4] — 2026-07-12
+
+### Added
+- **hopf/viz.py**: `create_hopf_fiber_animation_frames` — precomputed Plotly figure list (Gradio slider path)
+- **hopf/viz.py**: `plot_hopf_fiber_animation_slider` — frames + selected figure + meta
+- **hopf/viz.py**: `export_hopf_fiber_animation_mp4` — kaleido + imageio video export for `gr.Video`
+- Fixed axis ranges across frames for stable scrubbing; mode aliases (`twist`, `gauge_evolution`, …)
+
+### Notes
+- Kingdom Animate uses bake-once + instant frame index (not re-sample per tick).
+
 ## [0.2.3] — 2026-07-12
 
 ### Fixed
@@ -83,7 +94,8 @@ Initial public foundation for the Hopf / flux / quaternion / conduit ecosystem.
 - Consumer repos and HF Spaces pin `@v0.1.0` (git) until PyPI install is preferred.
 - Breaking changes to κ / R / PDE conventions require a minor or major bump and pin updates.
 
-[Unreleased]: https://github.com/kinaar8340/flux_hopf_lib/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/kinaar8340/flux_hopf_lib/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.3
 [0.2.2]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.2
 [0.2.1]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.1
 [0.2.0]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.0
