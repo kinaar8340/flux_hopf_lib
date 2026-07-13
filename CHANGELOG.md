@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Planned
 - Companion WebGPU / shaders.com explorer consuming `export_fiber_curves` (scaffolded)
 
+## [0.2.5] — 2026-07-12
+
+### Added / Changed
+- **Production animation API:** `create_hopf_fiber_animation_frames` now first-class supports
+  `twist` (z-rotation of fiber family) and `gauge_evolution` (κ radial breathing), plus
+  highlight modes (`xi1_orbit`, `eta_breath`, `gauge_twist`)
+- Tunables: `opacity`, `line_width`; fixed axis ranges; HF-safe 2D stereographic figures
+- Gradio pattern: bake → `gr.State` (plotly JSON) → slider index (instant scrub)
+
 ## [0.2.4] — 2026-07-12
 
 ### Added
@@ -94,7 +103,8 @@ Initial public foundation for the Hopf / flux / quaternion / conduit ecosystem.
 - Consumer repos and HF Spaces pin `@v0.1.0` (git) until PyPI install is preferred.
 - Breaking changes to κ / R / PDE conventions require a minor or major bump and pin updates.
 
-[Unreleased]: https://github.com/kinaar8340/flux_hopf_lib/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/kinaar8340/flux_hopf_lib/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.4
 [0.2.3]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.3
 [0.2.2]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.2
 [0.2.1]: https://github.com/kinaar8340/flux_hopf_lib/releases/tag/v0.2.1

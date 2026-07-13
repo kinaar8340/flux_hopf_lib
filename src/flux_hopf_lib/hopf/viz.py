@@ -27,7 +27,14 @@ from flux_hopf_lib.utils.grid import cartesian_grid
 
 ColorBy = Literal["phase", "base_point", "index"]
 Backend = Literal["matplotlib", "plotly"]
-AnimMode = Literal["xi1_orbit", "eta_breath", "gauge_twist", "hopfion_spin"]
+AnimMode = Literal[
+    "xi1_orbit",
+    "eta_breath",
+    "gauge_twist",
+    "hopfion_spin",
+    "twist",
+    "gauge_evolution",
+]
 
 FIBER_COLORS = (
     "#1a8fe3",
@@ -1120,7 +1127,7 @@ def plotly_fig_to_html(
 
 
 # ---------------------------------------------------------------------------
-# Gradio-friendly precomputed Plotly frames (recommended quality path)
+# Gradio-friendly precomputed Plotly frames (production quality path)
 # ---------------------------------------------------------------------------
 
 def _normalize_anim_mode(mode: str) -> AnimMode:
@@ -1128,11 +1135,13 @@ def _normalize_anim_mode(mode: str) -> AnimMode:
     aliases: dict[str, AnimMode] = {
         "xi1_orbit": "xi1_orbit",
         "orbit": "xi1_orbit",
-        "gauge_evolution": "xi1_orbit",
         "eta_breath": "eta_breath",
         "breath": "eta_breath",
         "gauge_twist": "gauge_twist",
-        "twist": "gauge_twist",
+        "phase": "gauge_twist",
+        "twist": "twist",
+        "gauge_evolution": "gauge_evolution",
+        "gauge": "gauge_evolution",
         "linking": "xi1_orbit",
         "hopfion_spin": "hopfion_spin",
         "hopfion": "hopfion_spin",
@@ -1140,95 +1149,86 @@ def _normalize_anim_mode(mode: str) -> AnimMode:
     return aliases.get(key, "xi1_orbit")
 
 
-def _build_single_animation_figure(
-    fibers: list[dict[str, Any]],
+def _fiber_xyz(fiber: dict[str, Any], projection_scale: float = 1.0) -> np.ndarray:
+    """(N, 3) stereographic curve from a sample_fiber dict."""
+    if "curve_xyz" in fiber:
+        xyz = np.asarray(fiber["curve_xyz"], dtype=float)
+    else:
+        xyz = np.column_stack(
+            [fiber["px"], fiber["py"], fiber["pz"]]
+        ).astype(float)
+    return xyz * float(projection_scale)
+
+
+def _apply_twist_xyz(xyz: np.ndarray, phase: float) -> np.ndarray:
+    """Rotate curve about z (stereographic) for a twist animation."""
+    c, s = float(np.cos(phase)), float(np.sin(phase))
+    rot = np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]], dtype=float)
+    return xyz @ rot.T
+
+
+def _apply_gauge_scale_xyz(xyz: np.ndarray, kappa: float) -> np.ndarray:
+    """Radial scale proxy for gauge evolution (κ-modulated envelope)."""
+    # κ ~ 0.65–0.95 → mild breathing of the projected link
+    return xyz * float(kappa)
+
+
+def _create_fiber_figure_2d(
+    curves: list[np.ndarray],
     *,
-    frame_idx: int,
-    n_frames: int,
-    mode: AnimMode,
-    eta: float,
-    xi1: float,
-    n_points: int,
-    projection_scale: float,
-    height: int,
-    title_base: str,
-    theme: dict[str, Any] | None,
-    axis_range: tuple[float, float] | None,
-    color_by: ColorBy,
+    colors: list[str] | None = None,
+    opacity: float = 0.85,
+    line_width: float = 2.5,
+    title: str = "Hopf Fibers",
+    height: int = 600,
+    theme: dict[str, Any] | None = None,
+    axis_range: tuple[float, float] | None = None,
+    highlight: np.ndarray | None = None,
+    phase_point: tuple[float, float] | None = None,
 ) -> Any:
-    """Internal: one high-quality 2D frame (static family + evolving highlight)."""
+    """Single high-quality HF-safe 2D Plotly figure (stereographic xy)."""
     go, _ = _require_plotly()
-    e, x = _anim_highlight_params(mode, frame_idx, n_frames, eta0=eta, xi1_0=xi1)
-    # For hopfion_spin fall back to eta_breath geometry in 2D
-    geom_mode: AnimMode = "eta_breath" if mode == "hopfion_spin" else mode
-    if geom_mode != mode:
-        e, x = _anim_highlight_params(geom_mode, frame_idx, n_frames, eta0=eta, xi1_0=xi1)
-
-    h = sample_fiber(e, x, n_points=n_points, scale=2.0)
-    hx = np.asarray(h["px"]) * projection_scale
-    hy = np.asarray(h["py"]) * projection_scale
-    k = (
-        int((frame_idx / max(n_frames, 1)) * (len(hx) - 1))
-        if geom_mode == "gauge_twist"
-        else 0
-    )
-
     fig = go.Figure()
-    for i, fiber in enumerate(fibers):
-        color = _fiber_color(i, fiber, color_by)
+    for i, curve in enumerate(curves):
+        color = (colors or FIBER_COLORS)[i % len(colors or FIBER_COLORS)]
         fig.add_trace(
             go.Scatter(
-                x=np.asarray(fiber["px"]) * projection_scale,
-                y=np.asarray(fiber["py"]) * projection_scale,
+                x=curve[:, 0],
+                y=curve[:, 1],
                 mode="lines",
-                line=dict(color=color, width=2.4),
-                opacity=0.42,
+                line=dict(color=color, width=line_width),
+                opacity=opacity,
+                name=f"Fiber {i + 1}",
                 showlegend=False,
                 hoverinfo="skip",
             )
         )
-    fig.add_trace(
-        go.Scatter(
-            x=hx,
-            y=hy,
-            mode="lines",
-            line=dict(color=ACCENT_GOLD, width=5.0),
-            name="highlight",
-            hovertemplate=(
-                f"η={e:.3f} · ξ₁={x:.3f}<br>"
-                "xy=(%{x:.2f}, %{y:.2f})<extra>highlight</extra>"
-            ),
+    if highlight is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=highlight[:, 0],
+                y=highlight[:, 1],
+                mode="lines",
+                line=dict(color=ACCENT_GOLD, width=line_width + 2.0),
+                name="highlight",
+            )
         )
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=[float(hx[k])],
-            y=[float(hy[k])],
-            mode="markers",
-            marker=dict(
-                size=12,
-                color=ACCENT_GOLD,
-                line=dict(width=1, color="#0a1628"),
-            ),
-            name="phase",
-            showlegend=False,
-            hovertemplate="phase marker<extra></extra>",
+    if phase_point is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=[phase_point[0]],
+                y=[phase_point[1]],
+                mode="markers",
+                marker=dict(size=12, color=ACCENT_GOLD, line=dict(width=1, color="#0a1628")),
+                name="phase",
+                showlegend=False,
+            )
         )
-    )
 
     layout: dict[str, Any] = {
         "height": height,
-        "title": dict(
-            text=(
-                f"{title_base}  · frame {frame_idx + 1}/{n_frames}  "
-                f"· η={e:.2f} ξ₁={x:.2f}"
-            ),
-            x=0.5,
-            xanchor="center",
-        ),
-        "margin": dict(l=48, r=24, t=64, b=48),
-        "showlegend": True,
-        "legend": dict(orientation="h", y=1.06),
+        "title": dict(text=title, x=0.5, xanchor="center"),
+        "margin": dict(l=48, r=24, t=56, b=48),
         "xaxis": dict(
             scaleanchor="y",
             scaleratio=1,
@@ -1237,17 +1237,16 @@ def _build_single_animation_figure(
             title="x (stereographic)",
         ),
         "yaxis": dict(showgrid=True, zeroline=True, title="y (stereographic)"),
+        "showlegend": True,
+        "legend": dict(orientation="h", y=1.06),
     }
     if axis_range is not None:
         lo, hi = axis_range
         layout["xaxis"]["range"] = [lo, hi]
         layout["yaxis"]["range"] = [lo, hi]
     if theme:
-        # Don't let theme clobber axis ranges / title structure
         for key, val in theme.items():
-            if key in ("xaxis", "yaxis", "updatemenus", "sliders"):
-                continue
-            if key == "title" and isinstance(val, dict):
+            if key in ("xaxis", "yaxis", "updatemenus", "sliders", "title"):
                 continue
             layout[key] = val
     fig.update_layout(**layout)
@@ -1256,88 +1255,119 @@ def _build_single_animation_figure(
 
 def create_hopf_fiber_animation_frames(
     n_fibers: int = 12,
-    n_points: int = 100,
     n_frames: int = 60,
+    n_points: int = 100,
     *,
-    mode: str = "xi1_orbit",
+    mode: str = "twist",
     animation_type: str | None = None,
+    color_by: ColorBy = "index",
+    opacity: float = 0.85,
+    line_width: float = 2.5,
     eta: float = 0.6,
     xi1: float = 1.2,
     projection_scale: float = 1.0,
-    height: int = 560,
+    height: int = 600,
     theme: dict[str, Any] | None = None,
-    color_by: ColorBy = "index",
     fixed_axis_range: bool = True,
     use_lod: bool = True,
     title: str | None = None,
 ) -> list[Any]:
     """
-    Precompute a list of Plotly figures (one per animation frame).
+    Generate a list of Plotly figures for smooth Gradio frame-by-frame animation.
 
-    **Recommended Gradio pattern** — bake once, scrub with ``gr.Slider``::
+    **Recommended HF / Gradio pattern**::
 
-        frames = create_hopf_fiber_animation_frames(n_fibers=12, n_frames=60)
-        frame_slider.change(lambda i: frames[int(i)], inputs=slider, outputs=plot)
+        frames = create_hopf_fiber_animation_frames(n_fibers=12, n_frames=60, mode="twist")
+        # store in gr.State; slider does: plot = frames[int(i)]
 
-    This is smoother and more reliable on HF Spaces than Matplotlib FuncAnimation
-    or Plotly client-side ``animate`` under ``gr.Plot``.
-
-    Parameters
-    ----------
-    mode / animation_type
-        ``xi1_orbit`` (alias: gauge_evolution, linking), ``eta_breath``,
-        ``gauge_twist`` (alias: twist), ``hopfion_spin`` (2D → eta_breath).
-    fixed_axis_range
-        Lock xy limits across frames so scrubbing does not "jump" the camera.
+    Animation types
+    ---------------
+    twist
+        Rigid z-rotation of the full fiber family (visual linking motion).
+    gauge_evolution
+        κ-modulated radial breathing of the projected links.
+    xi1_orbit / eta_breath / gauge_twist
+        Highlight fiber evolves on S² / along fiber phase (family fixed).
     """
     resolved = _normalize_anim_mode(animation_type or mode)
     n_frames = max(1, int(n_frames))
     pts = lod_n_points(n_fibers, base_points=n_points) if use_lod else int(n_points)
-    fibers = sample_fiber_family_cached(n_fibers=n_fibers, n_points=pts, scale=2.0)
-    fibers = [apply_fiber_lod(f, pts) for f in fibers]
+    base = sample_fiber_family_cached(n_fibers=n_fibers, n_points=pts, scale=2.0)
+    base = [apply_fiber_lod(f, pts) for f in base]
+    base_xyz = [_fiber_xyz(f, projection_scale) for f in base]
+    colors = [_fiber_color(i, f, color_by) for i, f in enumerate(base)]
+
+    # Precompute all transformed curves + optional highlight
+    frame_curves: list[list[np.ndarray]] = []
+    highlights: list[np.ndarray | None] = []
+    phase_pts: list[tuple[float, float] | None] = []
+    subtitles: list[str] = []
+
+    for fi in range(n_frames):
+        t = fi / max(n_frames - 1, 1)
+        if resolved == "twist":
+            phase = 2.0 * np.pi * t
+            curves = [
+                _apply_twist_xyz(xyz, phase + i * 0.28) for i, xyz in enumerate(base_xyz)
+            ]
+            highlights.append(None)
+            phase_pts.append(None)
+            subtitles.append(f"twist φ={phase:.2f}")
+        elif resolved == "gauge_evolution":
+            kappa = 0.78 + 0.18 * np.sin(2.0 * np.pi * t)
+            curves = [_apply_gauge_scale_xyz(xyz, kappa) for xyz in base_xyz]
+            highlights.append(None)
+            phase_pts.append(None)
+            subtitles.append(f"gauge κ={kappa:.3f}")
+        else:
+            # Highlight-evolution modes: fixed family + moving gold fiber
+            curves = list(base_xyz)
+            geom: AnimMode = "eta_breath" if resolved == "hopfion_spin" else resolved
+            if geom not in ("xi1_orbit", "eta_breath", "gauge_twist"):
+                geom = "xi1_orbit"
+            e, x = _anim_highlight_params(geom, fi, n_frames, eta0=eta, xi1_0=xi1)
+            h = sample_fiber(e, x, n_points=pts, scale=2.0)
+            hxyz = _fiber_xyz(h, projection_scale)
+            highlights.append(hxyz)
+            if geom == "gauge_twist":
+                k = int(t * (len(hxyz) - 1))
+                phase_pts.append((float(hxyz[k, 0]), float(hxyz[k, 1])))
+            else:
+                phase_pts.append(None)
+            subtitles.append(f"η={e:.2f} ξ₁={x:.2f}")
+        frame_curves.append(curves)
 
     axis_range: tuple[float, float] | None = None
     if fixed_axis_range:
         xs: list[float] = []
         ys: list[float] = []
-        for f in fibers:
-            xs.extend((np.asarray(f["px"]) * projection_scale).tolist())
-            ys.extend((np.asarray(f["py"]) * projection_scale).tolist())
-        # include highlight extremes over the full orbit
-        for fi in range(n_frames):
-            e, x = _anim_highlight_params(resolved, fi, n_frames, eta0=eta, xi1_0=xi1)
-            if resolved == "hopfion_spin":
-                e, x = _anim_highlight_params(
-                    "eta_breath", fi, n_frames, eta0=eta, xi1_0=xi1
-                )
-            h = sample_fiber(e, x, n_points=min(pts, 48), scale=2.0)
-            xs.extend((np.asarray(h["px"]) * projection_scale).tolist())
-            ys.extend((np.asarray(h["py"]) * projection_scale).tolist())
-        pad = 0.12
-        lo = float(min(min(xs), min(ys))) - pad
-        hi = float(max(max(xs), max(ys))) + pad
-        # square range
-        m = max(abs(lo), abs(hi), 1.0)
+        for curves in frame_curves:
+            for c in curves:
+                xs.extend(c[:, 0].tolist())
+                ys.extend(c[:, 1].tolist())
+        for h in highlights:
+            if h is not None:
+                xs.extend(h[:, 0].tolist())
+                ys.extend(h[:, 1].tolist())
+        m = max(abs(float(min(xs + ys))), abs(float(max(xs + ys))), 1.0) + 0.15
         axis_range = (-m, m)
 
-    title_base = title or f"Hopf fiber animation — {resolved}"
+    pretty = resolved.replace("_", " ").title()
+    title_base = title or f"Hopf Fibers — {pretty}"
     frames: list[Any] = []
     for fi in range(n_frames):
         frames.append(
-            _build_single_animation_figure(
-                fibers,
-                frame_idx=fi,
-                n_frames=n_frames,
-                mode=resolved,
-                eta=eta,
-                xi1=xi1,
-                n_points=pts,
-                projection_scale=projection_scale,
+            _create_fiber_figure_2d(
+                frame_curves[fi],
+                colors=colors,
+                opacity=opacity,
+                line_width=line_width,
+                title=f"{title_base} (frame {fi + 1}/{n_frames}) · {subtitles[fi]}",
                 height=height,
-                title_base=title_base,
                 theme=theme,
                 axis_range=axis_range,
-                color_by=color_by,
+                highlight=highlights[fi],
+                phase_point=phase_pts[fi],
             )
         )
     return frames
@@ -1345,35 +1375,33 @@ def create_hopf_fiber_animation_frames(
 
 def plot_hopf_fiber_animation_slider(
     n_fibers: int = 12,
-    n_points: int = 100,
     n_frames: int = 60,
+    n_points: int = 100,
     *,
-    mode: str = "xi1_orbit",
+    mode: str = "twist",
     animation_type: str | None = None,
     eta: float = 0.6,
     xi1: float = 1.2,
     projection_scale: float = 1.0,
-    height: int = 560,
+    height: int = 600,
     theme: dict[str, Any] | None = None,
     color_by: ColorBy = "index",
+    opacity: float = 0.85,
+    line_width: float = 2.5,
     frame_idx: int = 0,
 ) -> tuple[list[Any], Any, dict[str, Any]]:
     """
     Gradio-ready helper: precomputed frames + selected frame + metadata.
 
-    Returns
-    -------
-    frames
-        Full list of Plotly figures.
-    figure
-        ``frames[frame_idx]`` for immediate display.
-    meta
-        ``{"n_frames", "mode", "frame_idx"}`` for UI wiring.
+    Returns ``(frames, frames[frame_idx], meta)`` for::
+
+        frames_state, plot, meta = plot_hopf_fiber_animation_slider(...)
+        frame_slider.change(lambda i, f: f[int(i)], [slider, frames_state], [plot])
     """
     frames = create_hopf_fiber_animation_frames(
         n_fibers=n_fibers,
-        n_points=n_points,
         n_frames=n_frames,
+        n_points=n_points,
         mode=mode,
         animation_type=animation_type,
         eta=eta,
@@ -1382,6 +1410,8 @@ def plot_hopf_fiber_animation_slider(
         height=height,
         theme=theme,
         color_by=color_by,
+        opacity=opacity,
+        line_width=line_width,
     )
     n = len(frames)
     idx = int(frame_idx) % n

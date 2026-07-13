@@ -82,9 +82,11 @@ This matches the research-code vs demo-frontend split used by many scientific st
 
 ## HF / Gradio policy
 
-- Prefer **2D Plotly** (`plot_hopf_fibers_dashboard`, `plot_hopf_s2_fiber_explorer`, `create_plotly_fiber_animation`) on Spaces.
-- Force 2D in Kingdom when `SPACE_ID` is set (see kingdom `hopf_plotly.resolve_view_mode`).
-- Use LOD automatically for large `n_fibers` so browser plot payloads stay small.
+- Prefer **2D Plotly** dashboards / explorers on Spaces.
+- **Animations:** precompute with `create_hopf_fiber_animation_frames` and scrub via `gr.Slider` (not Matplotlib FuncAnimation; not client Play under `gr.Plot`).
+- Optional high-quality offline: `export_hopf_fiber_animation_mp4` → `gr.Video`.
+- Force 2D in Kingdom when `SPACE_ID` is set.
+- Use LOD for large `n_fibers` so plot payloads stay small.
 
 ## Related
 

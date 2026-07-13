@@ -238,20 +238,39 @@ def test_create_hopf_fiber_animation_frames_precomputed():
         n_fibers=4,
         n_points=40,
         n_frames=8,
-        mode="xi1_orbit",
+        mode="twist",
         fixed_axis_range=True,
         height=300,
+        opacity=0.85,
+        line_width=2.5,
     )
     assert len(frames) == 8
-    # Fixed ranges so scrubbing does not jump
     r0 = frames[0].layout.xaxis.range
     r1 = frames[-1].layout.xaxis.range
     assert r0 is not None and list(r0) == list(r1)
+
+    frames_g = create_hopf_fiber_animation_frames(
+        n_fibers=3, n_points=30, n_frames=6, mode="gauge_evolution", height=300
+    )
+    assert len(frames_g) == 6
 
     frames2, fig, meta = plot_hopf_fiber_animation_slider(
         n_fibers=3, n_points=30, n_frames=6, frame_idx=2, mode="twist"
     )
     assert len(frames2) == 6
     assert meta["frame_idx"] == 2
-    assert meta["mode"] == "gauge_twist"
+    assert meta["mode"] == "twist"
     assert fig is frames2[2]
+
+
+def test_twist_frames_differ():
+    pytest.importorskip("plotly")
+    from flux_hopf_lib.hopf.viz import create_hopf_fiber_animation_frames
+
+    frames = create_hopf_fiber_animation_frames(
+        n_fibers=3, n_points=40, n_frames=4, mode="twist", height=280
+    )
+    # First family curve should move between frames 0 and 1
+    x0 = list(frames[0].data[0].x[:5])
+    x1 = list(frames[1].data[0].x[:5])
+    assert x0 != x1
