@@ -1,0 +1,83 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "flux-hopf-lib"
+version = "0.1.0"
+description = "Shared core library for Hopf fibrations, quaternions, gauged flux lattices, conduits, and survival/relaxation probes"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "kinaar8340" }]
+keywords = [
+    "hopf-fibration",
+    "quaternion",
+    "flux-lattice",
+    "conduit",
+    "topological-defects",
+    "oam",
+    "gauge-dynamics",
+    "survival-probe",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+]
+
+[project.optional-dependencies]
+torch = ["torch>=2.0"]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.4",
+]
+viz = ["matplotlib>=3.7"]
+all = ["flux-hopf-lib[torch,dev,viz]"]
+
+[project.urls]
+Homepage = "https://github.com/kinaar8340/flux_hopf_lib"
+Repository = "https://github.com/kinaar8340/flux_hopf_lib"
+Ecosystem = "https://github.com/kinaar8340"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/flux_hopf_lib"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/README.md",
+    "/LICENSE",
+    "/docs",
+]
+
+# Standard src-layout: map src/flux_hopf_lib → flux_hopf_lib in the wheel
+[tool.hatch.build.targets.wheel.sources]
+"src/flux_hopf_lib" = "flux_hopf_lib"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
+ignore = ["E501"]
