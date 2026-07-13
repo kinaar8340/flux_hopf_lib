@@ -1,9 +1,14 @@
 # flux_hopf_lib
 
+[![PyPI](https://img.shields.io/pypi/v/flux-hopf-lib)](https://pypi.org/project/flux-hopf-lib/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/flux-hopf-lib)](https://pypi.org/project/flux-hopf-lib/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/kinaar8340/flux_hopf_lib/actions/workflows/ci.yml/badge.svg)](https://github.com/kinaar8340/flux_hopf_lib/actions/workflows/ci.yml)
+
 **Shared core library** for the Hopf / flux / quaternion / conduit ecosystem
 ([kinaar8340](https://github.com/kinaar8340)).
 
-**Version:** `0.1.0` · **Role:** single source of truth for foundational math.
+**Version:** [`0.1.0` on PyPI](https://pypi.org/project/flux-hopf-lib/) · **Role:** single source of truth for foundational math.
 
 Specialized experiments, Gradio portals, and full model stacks stay in consumer
 repos. Consumers depend on **this package**, not on each other, for shared

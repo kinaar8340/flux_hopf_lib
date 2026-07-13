@@ -53,6 +53,7 @@ Repository = "https://github.com/kinaar8340/flux_hopf_lib"
 Issues = "https://github.com/kinaar8340/flux_hopf_lib/issues"
 Changelog = "https://github.com/kinaar8340/flux_hopf_lib/blob/main/CHANGELOG.md"
 Documentation = "https://github.com/kinaar8340/flux_hopf_lib#readme"
+PyPI = "https://pypi.org/project/flux-hopf-lib/"
 Ecosystem = "https://github.com/kinaar8340"
 
 [tool.hatch.build.targets.sdist]

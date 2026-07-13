@@ -1,0 +1,65 @@
+# Create a GitHub Release when a version tag is pushed.
+# Release notes are taken from CHANGELOG.md (section matching the tag).
+#
+# Tag example: v0.1.0 → looks for "## [0.1.0]" in CHANGELOG.md
+
+name: GitHub Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    # Skip pure TestPyPI tags (e.g. v0.1.0-test)
+    if: ${{ !contains(github.ref_name, 'test') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract changelog section for this tag
+        id: notes
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # v0.1.0 → 0.1.0
+          VER="${TAG#v}"
+          NOTES_FILE="$RUNNER_TEMP/release-notes.md"
+          python3 - <<'PY' "$VER" "$NOTES_FILE"
+          import re, sys
+          from pathlib import Path
+
+          ver, out_path = sys.argv[1], sys.argv[2]
+          text = Path("CHANGELOG.md").read_text(encoding="utf-8")
+          # Match ## [0.1.0] — ... until next ## [
+          pattern = rf"(?ms)^## \[{re.escape(ver)}\][^\n]*\n(.*?)(?=^## \[|\Z)"
+          m = re.search(pattern, text)
+          if m:
+              body = m.group(1).strip() + "\n"
+          else:
+              body = (
+                  f"Release **{ver}** of flux-hopf-lib.\n\n"
+                  f"See [CHANGELOG.md](https://github.com/kinaar8340/flux_hopf_lib/blob/main/CHANGELOG.md).\n"
+                  f"PyPI: https://pypi.org/project/flux-hopf-lib/{ver}/\n"
+              )
+          Path(out_path).write_text(body, encoding="utf-8")
+          print(f"Wrote notes for {ver} ({len(body)} chars)")
+          PY
+          echo "notes_file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: flux-hopf-lib ${{ github.ref_name }}
+          body_path: ${{ steps.notes.outputs.notes_file }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'a') || contains(github.ref_name, 'b') || contains(github.ref_name, 'rc') }}
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

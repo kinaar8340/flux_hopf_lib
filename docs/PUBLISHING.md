@@ -88,7 +88,7 @@ flux-hopf-lib==0.1.0
 
 ## Future releases
 
-1. Update `CHANGELOG.md` under `[Unreleased]` → new section.
+1. Update `CHANGELOG.md` under `[Unreleased]` → new section (`## [0.2.0] — YYYY-MM-DD`).
 2. Bump version in **both**:
    - `pyproject.toml` → `version = "0.2.0"`
    - `src/flux_hopf_lib/__init__.py` → `__version__ = "0.2.0"`
@@ -100,7 +100,10 @@ git tag -a v0.2.0 -m "flux-hopf-lib 0.2.0"
 git push origin main --tags
 ```
 
-4. Bump consumer pins / HF Space requirements to the new version.
+4. Automatic:
+   - `publish.yml` → build + Trusted Publish to PyPI
+   - `release.yml` → GitHub Release with notes from `CHANGELOG.md`
+5. Bump consumer pins / HF Space requirements to the new version.
 
 ## Semver discipline
 
