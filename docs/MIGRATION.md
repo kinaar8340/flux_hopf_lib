@@ -136,10 +136,16 @@ core; hemi-void / `build_defect_density` stay HFB-local.
 
 ---
 
-## kingdom (last)
+## kingdom (last) — done
 
-Portal imports authoritative models from consumer packages; pull shared constants
-and lightweight probes from `flux_hopf_lib` so demos do not depend on path hacks.
+Portal (`kingdom_come`) re-exports:
+
+```python
+from kingdom.core.constants import PHI, R_RESIDUAL, DEFAULT_KAPPA, W_G_LOCK
+from kingdom.core import hopf_map, Quaternion  # → flux_hopf_lib under the hood
+```
+
+Investigation 6 and theory pages format live constants from the core package.
 
 ---
 
