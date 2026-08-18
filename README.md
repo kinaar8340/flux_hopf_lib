@@ -181,6 +181,8 @@ pytest
 
 MIT — see [LICENSE](LICENSE).
 
+X: [@kinaar8340](https://x.com/kinaar8340)
+
 ## Ecosystem links
 
 | Repo | URL |
